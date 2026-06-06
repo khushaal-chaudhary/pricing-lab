@@ -83,8 +83,18 @@ with st.sidebar:
         placeholder=f"Search {level.replace('_',' ')}s ({n_opts:,})...",
         help="Type to filter. Dropdown auto-completes as you type.",
     )
-    st.markdown("### Promo state")
-    promo = st.toggle("On promotion", value=False)
+    # Promo ε is only fitted at the main_category level (v9 splits log-price into
+    # regular vs promo coefficients per main_cat). Gate the toggle accordingly —
+    # hiding it elsewhere is cleaner than a silent no-op.
+    if level == "main_category":
+        st.markdown("### Promo state")
+        promo = st.toggle("On promotion", value=False,
+                           help="Switch ε to the promo coefficient — v9 fits a separate "
+                                "elasticity for weeks an item is on discount.")
+    else:
+        promo = False
+        st.caption("_Promo ε is only available at the main_category level. "
+                    "Switch aggregation to enable._")
     st.markdown("---")
     st.markdown("### Notes")
     st.caption(
@@ -185,12 +195,15 @@ with tab_sim:
     st.markdown(f"## Elasticity simulator - {level.replace('_', ' ')} / {entity}")
     eps, se = get_eps(level, entity)
     p_now, q_now, label = baseline_for(level, entity)
-    # promo toggle: shift eps toward promo elasticity (if available at main_category level)
+    # promo toggle: swap regular eps for the promo coefficient (v9 fits both per main_cat)
+    promo_active = False
+    eps_regular = eps
     if promo and level == "main_category":
         cat_v9 = load_cat_v9()
         row = cat_v9[cat_v9.main_category == entity]
         if len(row) and pd.notna(row.iloc[0].get("promo_elasticity")):
             eps = float(row.iloc[0]["promo_elasticity"])
+            promo_active = True
 
     # Observed price-variation support in the panel was [-30%, +43%] (5-95th pct).
     # Constant-elasticity demand q = q0 * (p/p0)^eps EXTRAPOLATES linearly in log
@@ -226,9 +239,18 @@ with tab_sim:
         banner = (f"<b>Anomalous</b>: ε = <code>{eps:+.2f}</code> is non-negative. "
                   f"Treat with caution; this entity has insufficient or confounded price signal.")
         tone = "default"
+    promo_prefix = ""
+    if promo_active:
+        promo_prefix = (
+            f'<div style="font-size:12px;color:var(--red);font-weight:600;'
+            f'letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">'
+            f'Switched to promo ε (regular ε was <code>{eps_regular:+.2f}</code>)'
+            f'</div>'
+        )
     st.markdown(
         f'<div class="card cream" style="margin: 12px 0 18px 0;">'
         f'<div class="metric-label">Regime diagnosis</div>'
+        f'{promo_prefix}'
         f'<div style="font-size:14px;color:var(--ink);line-height:1.5;margin-top:6px;">{banner}</div>'
         f'</div>',
         unsafe_allow_html=True,
