@@ -276,6 +276,27 @@ section[data-testid="stSidebar"] hr {{
     height: 2px !important;
 }}
 
+/* Nuclear reset on every descendant inside .stTabs that could carry a border
+   or background. BaseWeb wraps the tab label in 3-4 nested divs/spans; any
+   one of them could carry the visible "box" the user sees. */
+.stTabs [data-baseweb="tab-list"] *,
+.stTabs [role="tablist"] *,
+.stTabs button,
+.stTabs button > *,
+.stTabs [role="tab"],
+.stTabs [role="tab"] > * {{
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}}
+/* Re-apply the active-tab red underline (the nuclear reset above wiped it). */
+.stTabs [aria-selected="true"] {{
+    color: var(--ink) !important;
+    box-shadow: inset 0 -2px 0 var(--red) !important;
+}}
+
 /* ---- Buttons (ink-on-cream default; red for primary actions) ---- */
 .stButton > button {{
     background: var(--paper);
