@@ -1,0 +1,15 @@
+# raw home24 data must never enter the public repo
+data/
+*.parquet.raw
+home24_*.parquet
+
+# python / streamlit junk
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+.ipynb_checkpoints/
+.venv/
+
+# scratch
+_audit_*.py
+*.tmp

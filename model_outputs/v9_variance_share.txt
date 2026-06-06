@@ -1,0 +1,4 @@
+trend     25.2
+season    33.2
+events    37.9
+price      3.7
