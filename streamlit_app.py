@@ -13,21 +13,15 @@ st.set_page_config(page_title="home24 - Pricing Lab",
                     layout="wide",
                     initial_sidebar_state="expanded")
 
-try:
-    from app.styles import inject, PALETTE
-    from app.lib import (load_reconciled, load_final, load_cat_v9, load_leaderboard,
-                           load_variance_share, load_slides, entity_catalogue,
-                           get_eps, get_promo_eps, baseline_for, demand_curve,
-                           revenue_curve, confidence_band)
-    from app.charts import (variance_share_donut, leaderboard_bars,
-                              category_elasticity_bars, demand_curve_fig,
-                              revenue_curve_fig)
-    from app.components import metric_card, pull_quote, chip
-except Exception as _e:
-    import traceback as _tb
-    st.error("Import failed — full traceback below (caught locally, not redacted):")
-    st.code(_tb.format_exc())
-    st.stop()
+from app.styles import inject, PALETTE
+from app.lib import (load_reconciled, load_final, load_cat_v9, load_leaderboard,
+                       load_variance_share, load_slides, entity_catalogue,
+                       get_eps, get_promo_eps, baseline_for, demand_curve,
+                       revenue_curve, confidence_band)
+from app.charts import (variance_share_donut, leaderboard_bars,
+                          category_elasticity_bars, demand_curve_fig,
+                          revenue_curve_fig)
+from app.components import metric_card, pull_quote, chip
 
 
 # ---- Password gate ---------------------------------------------------------
