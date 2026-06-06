@@ -158,8 +158,8 @@ composite = 0.4·R²  +  0.3·(% cats ε<0)  +  0.2·(coverage/3000)  +  0.1·(1
 
 **The instinct says higher R² = better model.** It's only half-true here:
 
-- v8 — LightGBM with lag-sales features — hit **monthly R² 0.85**. But the lag features absorbed all the demand variance, so its price coefficient collapsed to ~0. Great forecaster, useless elasticity.
-- v7 — LightGBM with a monotonic constraint on price — has R² 0.54 but produces flat-region item ε = 0. Same problem.
-- v9 — MMM decomposition — has lower R² (0.56) than v8 but **isolates the price signal from baseline / trend / season / event variance**, so the ε is what's left after the other drivers are accounted for. That's what makes it defensible.
+- v7 — LightGBM with a monotonic constraint on price — has R² 0.54 and 100% category sign-validity, but the per-item ε comes from a finite-difference probe and lands in *flat regions* of the trees for many items → ε ≈ 0. Decent forecaster, hollow elasticity.
+- v10a / v10b — DML with LightGBM nuisance — also hit R² ~0.54 but materially **attenuate** ε (median -0.05 / -0.22 vs v9's -0.58). The nuisance learner over-absorbs price variance when log_price is collinear with promo/season/event controls (Chernozhukov 2018, §4.3). Same failure pattern: the flexible learner steals the signal price needs.
+- v9 — MMM decomposition — has comparable R² (0.56) but **isolates the price signal from baseline / trend / season / event variance** in a transparent linear partial-out, so the ε is what's left after the other drivers are accounted for. Tighter bootstrap CI (0.07 vs v7's 0.20). That's what makes it defensible.
 
 So the weights encode a deliberate stance: **we are not building a forecaster, we are estimating a causal coefficient.** R² gets 0.4 (must predict reasonably) but not 1.0 (because R² alone can be gamed by autoregressive features that crowd out price). The other 0.6 ensures the ε we ship has the right sign, covers the portfolio, and is stable. That's the answer to *"why didn't you pick the model with the highest R²?"*

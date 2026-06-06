@@ -150,9 +150,9 @@ with tab_lead:
             hide_index=True, use_container_width=True
         )
     st.markdown(pull_quote(
-        "v9 wins not on R&sup2; alone (v8 LightGBM beats it) but on elasticity "
-        "credibility - the price coefficient survives after seasonality and events "
-        "are partialed out."
+        "v9 wins not on R&sup2; alone - it edges v7 LightGBM by 0.02 - but on "
+        "elasticity credibility: bootstrap CI 0.07 vs 0.20, and the price "
+        "coefficient survives after seasonality and events are partialed out."
     ), unsafe_allow_html=True)
 
 
