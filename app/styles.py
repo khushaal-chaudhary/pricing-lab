@@ -371,14 +371,16 @@ header [data-testid="stToolbar"] {{ visibility: hidden !important; }}
 /* Show-sidebar arrow — force-visible across every Streamlit version's testid.
    Streamlit has renamed this element 3 times in the last year; selector list
    covers them all. */
+/* Show-sidebar arrow — scope STRICTLY to the collapsed-control element.
+   The previous selector list included `aria-label*=sidebar` and a sibling
+   structural match that caught every tab/button in the main content area,
+   painting borders + the wide red bar across all of them. */
+header[data-testid="stHeader"] [data-testid="stSidebarCollapsedControl"],
+header[data-testid="stHeader"] [data-testid="collapsedControl"],
+header[data-testid="stHeader"] [data-testid="stExpandSidebarButton"],
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
-[data-testid="stExpandSidebarButton"],
-section[data-testid="stSidebar"][aria-expanded="false"] + div button,
-button[aria-label*="sidebar" i],
-button[aria-label*="Sidebar" i],
-button[title*="sidebar" i],
-button[title*="Sidebar" i] {{
+[data-testid="stExpandSidebarButton"] {{
     visibility: visible !important;
     opacity: 1 !important;
     display: inline-flex !important;
@@ -391,9 +393,7 @@ button[title*="Sidebar" i] {{
 }}
 [data-testid="stSidebarCollapsedControl"] svg,
 [data-testid="collapsedControl"] svg,
-[data-testid="stExpandSidebarButton"] svg,
-button[aria-label*="sidebar" i] svg,
-button[aria-label*="Sidebar" i] svg {{
+[data-testid="stExpandSidebarButton"] svg {{
     fill: var(--ink) !important;
     color: var(--ink) !important;
     width: 18px !important; height: 18px !important;
