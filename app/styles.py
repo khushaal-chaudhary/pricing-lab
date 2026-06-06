@@ -269,13 +269,6 @@ section[data-testid="stSidebar"] hr {{
     color: var(--ink) !important;
     box-shadow: inset 0 -2px 0 var(--red) !important;
 }}
-/* The tab-highlight bar BaseWeb injects underneath the active tab */
-.stTabs [data-baseweb="tab-highlight"],
-.stTabs [data-baseweb="tab-border"] {{
-    background: var(--red) !important;
-    height: 2px !important;
-}}
-
 /* Nuclear reset on every descendant inside .stTabs that could carry a border
    or background. BaseWeb wraps the tab label in 3-4 nested divs/spans; any
    one of them could carry the visible "box" the user sees. */
@@ -295,6 +288,19 @@ section[data-testid="stSidebar"] hr {{
 .stTabs [aria-selected="true"] {{
     color: var(--ink) !important;
     box-shadow: inset 0 -2px 0 var(--red) !important;
+}}
+/* BaseWeb's two underline elements: `tab-highlight` is the sliding indicator
+   under the active tab — make it red. `tab-border` is the full-width baseline
+   under the entire tab strip — must be the rule colour, NOT red, or it paints
+   a wide red bar across every tab. These two were collapsed into one rule
+   previously and both came out red. */
+.stTabs [data-baseweb="tab-highlight"] {{
+    background-color: var(--red) !important;
+    height: 2px !important;
+}}
+.stTabs [data-baseweb="tab-border"] {{
+    background-color: var(--rule) !important;
+    height: 1px !important;
 }}
 
 /* ---- Buttons (ink-on-cream default; red for primary actions) ---- */
