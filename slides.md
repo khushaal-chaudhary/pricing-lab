@@ -113,6 +113,32 @@ A demand curve slopes down — ε < 0 is the only economically sensible sign for
 
 ---
 
+## Appendix — Promo elasticity (why main_category only, why it varies)
+
+The dashboard exposes a **promo toggle** on the simulator. v9 fits a separate log-price coefficient for weeks an item is on discount — so each main_category has *two* elasticities: regular and promo.
+
+### Why only at main_category
+
+v9 adds a single interaction term `promo × log_price × C(main_category)` — 17 extra coefficients on top of an already wide FE + seasonality matrix. Pushing the interaction to sub_cat (81 levels) or item (3,000 levels) explodes the design matrix, and most items have **fewer than 5 promo weeks** across the panel. Per-item promo slopes would be noise. Main_category is the finest level where every cell has enough promo events (typically 200+) to identify the coefficient cleanly.
+
+### Why some categories have promo ε *closer to zero* than regular ε
+
+Three structural reasons — not a bug:
+
+1. **Promo timing collinear with seasonality.** When discounts cluster on Black Friday / Christmas, the promo dummy partially absorbs demand swings that would otherwise show up as price response. Fourier + holiday controls strip the easy part out, but residual collinearity flattens the promo slope.
+2. **Mix-shift toward deal-hunters.** During discount windows the marginal buyer is different — they would buy *something* in the category regardless. Volume rises but not in proportion to the discount, so the *apparent* ε shrinks.
+3. **Reference-price erosion.** Categories that promote constantly (mattresses, certain seating ranges) train customers to wait for sales; the promo price *becomes* the reference, so an additional cut moves less volume.
+
+The mix of those three forces varies by category, which is why the regular-vs-promo ranking flips across the 17 main_cats.
+
+### Propagating promo ε down — defensible only if labelled
+
+- **Inheritance from parent (defensible):** assigning each item the promo ε of its main_cat is the same logic as category fixed effects — borrow strength from the parent when the child has no signal. **The dashboard surfaces a "promo ε inherited from {main_cat}" badge** so the user knows it's a parent value, not an item-level estimate.
+- **Per-item promo ε (not defensible):** estimating a separate promo slope per item has no statistical support given <5 promo events per item.
+- **Roadmap — hierarchical Bayes:** `item_promo_ε ~ Normal(main_cat_promo_ε, τ²)` via PyMC partial-pooling. Items with many promo events drift toward their own value; items with few stay pinned to the parent. Same logic as MinT, applied to the promo coefficient.
+
+---
+
 ## Appendix — How I scored models (the composite metric)
 
 There is **no ground-truth elasticity in the data** — nobody labelled "the true ε of im6 is -0.75." So I can't pick a winner on accuracy alone. I scored each model on four proxy signals that, together, say "this ε is credible":

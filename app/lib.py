@@ -128,6 +128,35 @@ def get_eps(level: str, key: str) -> tuple[float, float]:
     # Last resort: portfolio (negative by construction)
     return _lookup_rec("portfolio", "portfolio") or (-0.6, 0.1)
 
+def get_promo_eps(level: str, key: str) -> tuple[float | None, str | None]:
+    """Return (promo_eps, parent_main_category) for any (level, key).
+
+    Promo ε is only fitted at main_category in v9. For item / sub_category we
+    *inherit* from the parent main_cat — same logic as category fixed effects.
+    Returns (None, None) when no promo ε is available (entity outside the
+    main_cat hierarchy, or main_cat has NaN promo coefficient).
+    """
+    cat_v9 = load_cat_v9()
+    if "promo_elasticity" not in cat_v9.columns:
+        return None, None
+
+    main_cat = None
+    if level == "main_category":
+        main_cat = str(key)
+    elif level == "item":
+        parents = _category_for_item(key)
+        if parents: main_cat = parents[1]
+    elif level == "sub_category":
+        final = load_final()
+        row = final[final.sub_category.astype(str) == str(key)]
+        if len(row): main_cat = str(row.iloc[0]["main_category"])
+
+    if not main_cat: return None, None
+    row = cat_v9[cat_v9.main_category == main_cat]
+    if not len(row) or pd.isna(row.iloc[0].get("promo_elasticity")):
+        return None, None
+    return float(row.iloc[0]["promo_elasticity"]), main_cat
+
 # ---- simulator math ------------------------------------------------------
 def demand_curve(eps: float, p_now: float, q_now: float,
                   p_grid: np.ndarray) -> np.ndarray:

@@ -16,8 +16,8 @@ st.set_page_config(page_title="home24 - Pricing Lab",
 from app.styles import inject, PALETTE
 from app.lib import (load_reconciled, load_final, load_cat_v9, load_leaderboard,
                        load_variance_share, load_slides, entity_catalogue,
-                       get_eps, baseline_for, demand_curve, revenue_curve,
-                       confidence_band)
+                       get_eps, get_promo_eps, baseline_for, demand_curve,
+                       revenue_curve, confidence_band)
 from app.charts import (variance_share_donut, leaderboard_bars,
                           category_elasticity_bars, demand_curve_fig,
                           revenue_curve_fig)
@@ -83,18 +83,14 @@ with st.sidebar:
         placeholder=f"Search {level.replace('_',' ')}s ({n_opts:,})...",
         help="Type to filter. Dropdown auto-completes as you type.",
     )
-    # Promo ε is only fitted at the main_category level (v9 splits log-price into
-    # regular vs promo coefficients per main_cat). Gate the toggle accordingly —
-    # hiding it elsewhere is cleaner than a silent no-op.
-    if level == "main_category":
-        st.markdown("### Promo state")
-        promo = st.toggle("On promotion", value=False,
-                           help="Switch ε to the promo coefficient — v9 fits a separate "
-                                "elasticity for weeks an item is on discount.")
-    else:
-        promo = False
-        st.caption("_Promo ε is only available at the main_category level. "
-                    "Switch aggregation to enable._")
+    # Promo ε is fitted only at main_category in v9 (separate log-price slope
+    # for discount weeks). For item / sub_cat we *inherit* the parent main_cat's
+    # promo ε — same logic as category fixed effects. The simulator badges the
+    # inheritance so it's never confused with a child-level estimate.
+    st.markdown("### Promo state")
+    promo = st.toggle("On promotion", value=False,
+                       help="Switch ε to the promo coefficient. v9 fits promo ε at "
+                            "main_category; item / sub_category inherit from the parent.")
     st.markdown("---")
     st.markdown("### Notes")
     st.caption(
@@ -195,15 +191,19 @@ with tab_sim:
     st.markdown(f"## Elasticity simulator - {level.replace('_', ' ')} / {entity}")
     eps, se = get_eps(level, entity)
     p_now, q_now, label = baseline_for(level, entity)
-    # promo toggle: swap regular eps for the promo coefficient (v9 fits both per main_cat)
+    # promo toggle: swap regular eps for the promo coefficient. v9 fits promo ε
+    # at main_category only; item / sub_cat inherit from the parent main_cat
+    # (category-FE inheritance — flagged in the badge below).
     promo_active = False
+    promo_inherited_from = None
     eps_regular = eps
-    if promo and level == "main_category":
-        cat_v9 = load_cat_v9()
-        row = cat_v9[cat_v9.main_category == entity]
-        if len(row) and pd.notna(row.iloc[0].get("promo_elasticity")):
-            eps = float(row.iloc[0]["promo_elasticity"])
+    if promo:
+        promo_val, parent = get_promo_eps(level, entity)
+        if promo_val is not None:
+            eps = promo_val
             promo_active = True
+            if level != "main_category":
+                promo_inherited_from = parent
 
     # Observed price-variation support in the panel was [-30%, +43%] (5-95th pct).
     # Constant-elasticity demand q = q0 * (p/p0)^eps EXTRAPOLATES linearly in log
@@ -241,10 +241,12 @@ with tab_sim:
         tone = "default"
     promo_prefix = ""
     if promo_active:
+        inherit_note = (f" &middot; inherited from <b>{promo_inherited_from}</b>"
+                        if promo_inherited_from else "")
         promo_prefix = (
             f'<div style="font-size:12px;color:var(--red);font-weight:600;'
             f'letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">'
-            f'Switched to promo ε (regular ε was <code>{eps_regular:+.2f}</code>)'
+            f'Switched to promo ε (regular ε was <code>{eps_regular:+.2f}</code>){inherit_note}'
             f'</div>'
         )
     st.markdown(
