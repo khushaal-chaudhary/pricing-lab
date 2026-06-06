@@ -1,8 +1,8 @@
-# home24 Pricing Lab
+# Pricing Lab
 
-Single-page Streamlit dashboard for the home24 Data Scientist (Sales Forecasting) case study by **Khushaal Chaudhary**.
+Single-page Streamlit dashboard for a price-elasticity case study on a 3,000-item retail panel, by **Khushaal Chaudhary**.
 
-Demand response of home24's catalogue is estimated via a v9 MMM-style decomposition (item-shop FE + linear trend + K=4 Fourier seasonality + holiday dummies + category × log(price)). DML (v10a/v10b) and a per-item ridge (v6) provide robustness; MinT reconciliation (Wickramasuriya 2019) keeps portfolio/main/sub/item elasticities mathematically coherent.
+Demand response is estimated via a v9 MMM-style decomposition (item-shop FE + linear trend + K=4 Fourier seasonality + holiday dummies + category × log(price)). DML (v10a/v10b) and a per-item ridge (v6) provide robustness; MinT reconciliation (Wickramasuriya 2019) keeps portfolio / main / sub / item elasticities mathematically coherent.
 
 ## Tabs
 
@@ -27,7 +27,7 @@ Public-but-unlisted on Streamlit Community Cloud:
 2. https://share.streamlit.io → **New app** → repo + branch + `streamlit_app.py`.
 3. **Advanced settings → Secrets**:
    ```toml
-   APP_PASSWORD = "home24-2026"
+   APP_PASSWORD = "your-access-code-here"
    ```
 4. Share the URL + access code in the cover letter only.
 
@@ -40,5 +40,5 @@ This repo contains **derived artefacts only**:
 - `model_outputs/v9_variance_share.txt` — portfolio-level variance decomposition
 - `leaderboard.md`, `slides.md` — model leaderboard + storyboard
 
-Raw home24 panel data **never enters this repo** (see `.gitignore`).
+Raw panel data **never enters this repo** (see `.gitignore`).
 
