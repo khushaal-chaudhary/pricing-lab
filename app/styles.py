@@ -311,36 +311,47 @@ section[data-testid="stSidebar"] hr {{
 /* Dividers */
 hr {{ border: none; border-top: 1px solid var(--rule); margin: 2rem 0; }}
 
-/* Hide default Streamlit chrome — but KEEP <header> in the DOM so the sidebar
-   collapse / expand arrow remains clickable when the sidebar is closed.
-   Earlier display:none on the header removed the arrow entirely. */
+/* Streamlit chrome: keep the header at native height so the show-sidebar
+   arrow (which lives inside it) is not clipped. Just make it visually flat. */
 header[data-testid="stHeader"] {{
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;
-    height: 2.5rem !important;
-    min-height: 2.5rem !important;
 }}
-#MainMenu, footer, [data-testid="stDecoration"], [data-testid="stToolbar"] {{
+#MainMenu, footer, [data-testid="stDecoration"] {{
     visibility: hidden !important; height: 0 !important;
 }}
-/* Sidebar expand arrow (visible when sidebar is collapsed). Streamlit names
-   this element differently across versions — cover all known ids. */
+header [data-testid="stToolbar"] {{ visibility: hidden !important; }}
+
+/* Show-sidebar arrow — force-visible across every Streamlit version's testid.
+   Streamlit has renamed this element 3 times in the last year; selector list
+   covers them all. */
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="collapsedControl"],
-button[kind="header"][aria-label*="sidebar" i],
-button[aria-label="open sidebar" i],
-button[aria-label="Open sidebar" i] {{
+[data-testid="stExpandSidebarButton"],
+section[data-testid="stSidebar"][aria-expanded="false"] + div button,
+button[aria-label*="sidebar" i],
+button[aria-label*="Sidebar" i],
+button[title*="sidebar" i],
+button[title*="Sidebar" i] {{
     visibility: visible !important;
     opacity: 1 !important;
-    display: flex !important;
-    z-index: 100001 !important;
+    display: inline-flex !important;
+    pointer-events: auto !important;
+    z-index: 999999 !important;
     background: var(--paper) !important;
     border: 1px solid var(--rule-strong) !important;
     border-radius: 4px !important;
     color: var(--ink) !important;
-    top: 0.6rem !important;
-    left: 0.6rem !important;
+}}
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg,
+[data-testid="stExpandSidebarButton"] svg,
+button[aria-label*="sidebar" i] svg,
+button[aria-label*="Sidebar" i] svg {{
+    fill: var(--ink) !important;
+    color: var(--ink) !important;
+    width: 18px !important; height: 18px !important;
 }}
 
 /* ---- Editorial masthead ---- */
