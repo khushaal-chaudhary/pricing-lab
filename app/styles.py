@@ -239,17 +239,41 @@ section[data-testid="stSidebar"] hr {{
     background: transparent;
     padding-left: 0;
 }}
-.stTabs [data-baseweb="tab"] {{
+.stTabs [data-baseweb="tab"],
+.stTabs [data-baseweb="tab"] button,
+.stTabs button[role="tab"] {{
     background: transparent !important;
-    padding: 12px 0 14px 0;
+    padding: 12px 2px 14px 2px !important;
     font-family: var(--t-ui); font-weight: 500; font-size: 14px;
-    color: var(--ink-3);
+    color: var(--ink-3) !important;
     border: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
 }}
-.stTabs [data-baseweb="tab"]:hover {{ color: var(--ink-2); }}
+.stTabs [data-baseweb="tab"]:hover,
+.stTabs button[role="tab"]:hover {{
+    color: var(--ink-2) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}}
+.stTabs [data-baseweb="tab"]:focus,
+.stTabs [data-baseweb="tab"]:focus-visible,
+.stTabs button[role="tab"]:focus,
+.stTabs button[role="tab"]:focus-visible {{
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}}
 .stTabs [aria-selected="true"] {{
     color: var(--ink) !important;
     box-shadow: inset 0 -2px 0 var(--red) !important;
+}}
+/* The tab-highlight bar BaseWeb injects underneath the active tab */
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] {{
+    background: var(--red) !important;
+    height: 2px !important;
 }}
 
 /* ---- Buttons (ink-on-cream default; red for primary actions) ---- */
