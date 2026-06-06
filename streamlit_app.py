@@ -116,10 +116,12 @@ with tab_story:
     with col_b:
         st.markdown(f'<div class="eyebrow" style="text-align:center;">Slide {i+1} / {n}</div>',
                      unsafe_allow_html=True)
-    st.markdown('<div class="card" style="margin-top:1rem;padding:32px 40px;">',
-                 unsafe_allow_html=True)
-    st.markdown(slides[i], unsafe_allow_html=False)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Streamlit closes each markdown call as its own DOM block, so wrapping
+    # st.markdown(slides[i]) between two raw <div> markdowns produces an empty
+    # bordered box. Use st.container(border=True) — native Streamlit border that
+    # actually contains the children — then scope a class via the wrapping span.
+    with st.container(border=True):
+        st.markdown(slides[i], unsafe_allow_html=False)
     st.caption("Slides re-read from slides.md on every render - edit the file and refresh.")
 
 

@@ -175,6 +175,19 @@ code, .stMarkdown code {{
 }}
 .card.cream {{ background: var(--paper-2); }}
 
+/* Native st.container(border=True) — actually wraps its children. Restyle to match
+   our card aesthetic (thin rule, generous padding, no shadow, no rounded corners). */
+[data-testid="stVerticalBlockBorderWrapper"] {{
+    border: 1px solid var(--rule) !important;
+    border-radius: 4px !important;
+    background: var(--paper) !important;
+    padding: 28px 36px !important;
+    margin-top: 1rem !important;
+}}
+[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    background: transparent !important;
+}}
+
 .metric-label {{
     font-family: var(--t-ui);
     font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
