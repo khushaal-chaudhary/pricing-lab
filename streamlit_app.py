@@ -150,9 +150,10 @@ with tab_lead:
             hide_index=True, use_container_width=True
         )
     st.markdown(pull_quote(
-        "v9 wins not on R&sup2; alone - it edges v7 LightGBM by 0.02 - but on "
-        "elasticity credibility: bootstrap CI 0.07 vs 0.20, and the price "
-        "coefficient survives after seasonality and events are partialed out."
+        "v9 wins not on R&sup2; alone - v4 Poisson FE actually has the highest "
+        "R&sup2; (0.62) but only covers 500 items - v9 wins on the combination of "
+        "tight CI (0.07), full 3,000-item coverage, and a transparent partial-out "
+        "of seasonality and events from the price coefficient."
     ), unsafe_allow_html=True)
 
 
