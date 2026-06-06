@@ -311,16 +311,36 @@ section[data-testid="stSidebar"] hr {{
 /* Dividers */
 hr {{ border: none; border-top: 1px solid var(--rule); margin: 2rem 0; }}
 
-/* Hide default Streamlit chrome - the <header> itself occupies vertical
-   space and overlays the masthead with a translucent strip. Collapse it. */
+/* Hide default Streamlit chrome — but KEEP <header> in the DOM so the sidebar
+   collapse / expand arrow remains clickable when the sidebar is closed.
+   Earlier display:none on the header removed the arrow entirely. */
 header[data-testid="stHeader"] {{
     background: transparent !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    display: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    height: 2.5rem !important;
+    min-height: 2.5rem !important;
 }}
 #MainMenu, footer, [data-testid="stDecoration"], [data-testid="stToolbar"] {{
-    visibility: hidden !important; height: 0 !important; display: none !important;
+    visibility: hidden !important; height: 0 !important;
+}}
+/* Sidebar expand arrow (visible when sidebar is collapsed). Streamlit names
+   this element differently across versions — cover all known ids. */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+button[kind="header"][aria-label*="sidebar" i],
+button[aria-label="open sidebar" i],
+button[aria-label="Open sidebar" i] {{
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    z-index: 100001 !important;
+    background: var(--paper) !important;
+    border: 1px solid var(--rule-strong) !important;
+    border-radius: 4px !important;
+    color: var(--ink) !important;
+    top: 0.6rem !important;
+    left: 0.6rem !important;
 }}
 
 /* ---- Editorial masthead ---- */
