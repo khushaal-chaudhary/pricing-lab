@@ -250,7 +250,24 @@ log(sales+1) = α_(i,s) + month_FE + Σ_c ε_c · log(price) · 1[cat = c] + err
 
 **Why it loses despite the highest R².** Coverage 500/3,000 = 0.17 costs it ~0.16 on the composite (which weights coverage at 0.2). A high R² on a curated subset isn't a deliverable for a brief that asks for **all** items.
 
-**What it teaches.** v4 is a **methodological sanity check** — "does a proper count model agree with our log-linear family on the items where it can fit?" It does (R² 0.62, 100% cat-neg, same sign pattern). That's the robustness signal you need; v9 then handles the full delivery.
+**What it teaches.** v4 is a **methodological sanity check** — "does a proper count model agree with our log-linear family on the items where it can fit?" The answer is **sign yes, magnitude no** (see comparison below). That divergence is itself the headline story for the elasticity range.
+
+**Head-to-head v4 vs v9 on the 500-item overlap.**
+
+| Metric | v4 (Poisson FE, top-500) | v9 (MMM, full panel) |
+|---|---|---|
+| Categories with ε < 0 | 15 / 15 | 17 / 17 (15 overlap) |
+| Items with ε < 0 (overlap) | **500 / 500** | (same items) |
+| Median \|ε\| (category) | **2.30** | 0.58 |
+| Median \|ε\| (per-item) | **2.18** | 0.67 |
+| Pearson corr (category ε) | 0.27 | |
+| Spearman rank (category) | 0.35 | |
+
+**Sign agrees, magnitude doesn't.** v4 is ~4× more elastic than v9. Two plausible reasons:
+1. **Log-shift bias.** Log-OLS on `log(sales+1)` is known to bias slopes toward zero on zero-inflated count data (Silva & Tenreyro 2006, "The Log of Gravity"). Poisson with log link has no `+1` hack and may be closer to truth. The Bijmolt 2005 durables literature centres on −1.0 to −2.0 — v4 sits **inside** that range, v9 sits **below** it.
+2. **Top-500 over-fit.** High-volume items have more price variation and larger absolute volume swings; their fitted slopes are louder than the panel average. Some of v4's magnitude advantage is the favorable subset.
+
+The honest framing: **v9's −0.58 is a likely lower bound on the magnitude; v4's −2.30 is a likely upper bound; truth probably lives at −1.0 to −1.5**, which matches the literature. v9 still ships as the headline (it's the full-coverage deliverable) but is reported with this range in the methodology slide.
 
 ---
 
@@ -303,6 +320,31 @@ Two slopes per category, 34 in total.
 **Why composite is 0.804 (second place).** Decent R², 100% cat-neg, full coverage. But CI 0.20 (vs v9's 0.07) reflects the finite-difference instability. v9 beats it on every term except R².
 
 **The lesson.** Flexible ML can predict well but doesn't naturally produce a **smooth, interpretable slope**. For an elasticity deliverable, "what is the slope" needs to be a model parameter, not a post-hoc probe.
+
+---
+
+### v8 — LightGBM with lag-sales features (built, dropped from the headline leaderboard)
+
+**Goal.** "Push R² above 0.80 by giving the model the most informative possible feature for next-week's sales: last-week's sales."
+
+**Recipe.** Same LightGBM stack as v7, but with extra features:
+- `lag1_sales`, `lag2_sales`, `lag4_sales`, `lag13_sales`, `lag52_sales` — sales counts from prior weeks.
+- `roll4_mean`, `roll13_mean`, `roll4_std` — rolling averages and volatility.
+- `lag1_log_price`, `d_log_price = log_price − lag1_log_price` — price-change shock.
+
+ε recovered via the same finite-difference probe as v7.
+
+**Why it was built.** Forecasting orthodoxy says lag features are the single biggest signal for any time-series prediction problem. Including them should push R² well past v7's 0.54 — maybe into the 0.80+ territory that "real" forecasting models hit.
+
+**Why it failed cleanly.** R² did indeed climb. But the **per-category ε's collapsed to ~−0.005 to −0.02** — essentially zero. The lag features explain so much of next-week's sales that almost no variance is left for the price coefficient to explain. The price slope, fitted as the residual signal, is effectively ε ≈ 0 across every category.
+
+This is the **textbook "great forecaster, useless elasticity"** failure mode. R² and elasticity-credibility are in tension when the predictive features are too informative on a non-price axis.
+
+**Why it was dropped from the headline leaderboard.** Reporting "v8 has high R² and ε ≈ 0" is *redundant* once v10's DML attenuation shows the same pattern more cleanly with a principled justification (Chernozhukov 2018 weak-treatment-exogeneity failure). v8 is the LightGBM version of the same pathology; v10 is the causal-ML version. The leaderboard keeps v10 (which has a clean theoretical story) and drops v8 (which is the same story without the theory).
+
+**v8 is preserved in the pipeline** (`models_v8.py`, `model_outputs/v8_cat.csv`, `model_outputs/v8_item.csv`) so the artefact trail is honest about what was built. The composite leaderboard reports only the curated set; v8 lives in the iteration log as "tried, learned, dropped."
+
+**The lesson — and the interview line.** "Adding lag-sales features to v7 produces v8: R² climbs, ε collapses. That's the most direct demonstration in the project that R² alone is the wrong target. The composite metric exists precisely because v8 would have won on R² and shipped a worthless ε."
 
 ---
 
