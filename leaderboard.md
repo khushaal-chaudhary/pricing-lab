@@ -15,6 +15,9 @@ Higher = better.
 | v0_naive_event             |     nan      |             0 |             2957 |         nan     |      0.2471 |
 | v10a_dml_log               |       0.5400 |          0.88 |             3000 |           0.090 |      0.7568 |
 | v10b_dml_tweedie           |       0.5500 |          0.82 |             3000 |           0.105 |      0.7507 |
+| v11_tweedie_glm            |       0.0029 |          0.35 |             3000 |           0.016 |      0.4063 |
+
+> **v11 verdict (Tweedie GLM with Mundlak FE):** Built to isolate "what does the right likelihood add to v9?" from v10b (which mixes Tweedie with DML attenuation). v9 design matrix (K=4 Fourier + holidays + trend + cat×log_price×promo) refitted via statsmodels Tweedie GLM (var_power=1.5, log link) on raw counts, with item-shop FE absorbed via Mundlak (item-shop mean of log_price). Result: ε collapses to ~0 (median +0.003, 65% cats POSITIVE). Mundlak is exact under FWL for linear models; under a log link it is only approximate — with log_price split across 17 category interactions, a single shared `mu_lp_is` control cannot partial out between-item variation for each category slope. The right Tweedie-family fix needs explicit per-item FE within category (the v4 recipe) — which is why v4 scales only to the top-500 items where the MLE remains tractable. Useful negative result: confirms that v4's clean -2.30 magnitude relies on proper nonlinear FE, not just the count likelihood.
 
 > **v10 verdict (DML):** v10a/v10b reproduce the sign on most categories but estimates are materially attenuated (median ε ≈ -0.05 / -0.22 vs v9's -0.58). DML's nuisance LightGBM over-absorbs within-item variation when log_price is highly collinear with promo/season/event controls — a known DML failure mode under weak treatment exogeneity (see Chernozhukov 2018, §4.3). v9 stays headline; v10 is reported as a lower-bound robustness check. Truth most likely lies in [-0.58, -0.22]; both are negative, both inelastic, both consistent with Bijmolt (2005) durables.
 
@@ -28,3 +31,4 @@ Higher = better.
 - v6 Ridge per-item: regularized per-item OLS to fix v2 overfit.
 - v7 LightGBM with monotonic price: ML model; ε via finite-difference on log_price.
 - v9 MMM-style decomposition: item-shop FE + linear trend + K=4 Fourier seasonality + holiday dummies (BFCM/Xmas/NYE/Easter/COVID) + category×log(price) split by promo. Isolates price signal from baseline/trend/season/events.
+- v11 Tweedie GLM with v9 design + Mundlak FE: linear sibling of v10b that swaps OLS-on-log(sales+1) for a Tweedie likelihood (var_power=1.5, log link) on raw counts. Single-stage GLM, no cross-fitting (no flexible nuisance to debias). Mundlak FE collapses the elasticity to ~0 because the log link breaks FWL — informative negative result, reported as a sensitivity.

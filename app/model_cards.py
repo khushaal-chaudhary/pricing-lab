@@ -11,7 +11,7 @@ ORDER = [
     "v9_mmm_light", "v7_lightgbm_monotone", "v5_promo_split",
     "v3_fe_category_interaction", "v10a_dml_log", "v10b_dml_tweedie",
     "v4_poisson_fe", "v1_pooled_ols", "v6_ridge_per_item",
-    "v2_per_item_ols", "v0_naive_event",
+    "v2_per_item_ols", "v11_tweedie_glm", "v0_naive_event",
 ]
 
 CARDS: dict[str, dict[str, str]] = {
@@ -251,6 +251,39 @@ CARDS: dict[str, dict[str, str]] = {
             "The textbook example of why you POOL information across items in low-N "
             "settings. v6 ridges this; v3 onward pools entirely. v2 is in the leaderboard "
             "to make the failure visible."
+        ),
+    },
+    "v11_tweedie_glm": {
+        "tagline": "Tweedie GLM with v9's linear design - the count-likelihood sibling of v10b without the DML attenuation.",
+        "layman": (
+            "We wondered: does v10b's modest elasticity (-0.22) come from the Tweedie "
+            "fix (right likelihood for zeros) or from DML's flexible-nuisance attenuation? "
+            "v11 isolates the question - same v9 design matrix (Fourier seasonality, "
+            "holidays, trend, cat x log_price split by promo) but fitted with a Tweedie "
+            "likelihood on raw counts. No DML, no cross-fitting, just one MLE coefficient. "
+            "Result: elasticity collapsed to zero. The reason is technical but instructive "
+            "(see below)."
+        ),
+        "features": (
+            "statsmodels Tweedie GLM with variance_power=1.5, log link, raw sales counts "
+            "as target. Item-shop FE absorbed via Mundlak (item-shop mean of log_price "
+            "added as a control). Same K=4 Fourier + holiday dummies + linear trend + "
+            "main_category x log(price) split by promo as v9. Single stage, no cross-fitting."
+        ),
+        "result": (
+            "Holdout R^2 = 0.003, only 35% cats negative, full coverage, CI 0.016. "
+            "Median ε = +0.003, median |ε| = 0.009 (effectively zero). Composite = 0.41."
+        ),
+        "verdict": (
+            "Useful negative result. Mundlak's FE-equivalence is exact in linear OLS "
+            "(Frisch-Waugh-Lovell) but only approximate under a log link. With log_price "
+            "split across 17 category interactions, a single shared item-shop mean control "
+            "cannot partial out the between-item variation for each category's slope, and "
+            "the elasticities collapse. v4 sidesteps this by using EXPLICIT per-item FE "
+            "within category - which is also why v4 only scales to the top-500 items "
+            "(MLE intractable on the full panel). Confirms v4's clean -2.30 magnitude "
+            "relies on proper nonlinear FE, not just the count likelihood. v9 + v4 stay "
+            "the headline bracket."
         ),
     },
     "v0_naive_event": {
