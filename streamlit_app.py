@@ -91,6 +91,16 @@ with st.sidebar:
     promo = st.toggle("On promotion", value=False,
                        help="Switch ε to the promo coefficient. v9 fits promo ε at "
                             "main_category; item / sub_category inherit from the parent.")
+    st.markdown("### Custom ε override")
+    eps_override_on = st.toggle("Override fitted ε", value=False,
+                                  help="Replace the looked-up ε with a custom value to "
+                                       "stress-test pricing decisions under different "
+                                       "elasticity assumptions (e.g. the v4 Poisson "
+                                       "estimate, or the Bijmolt 2005 durables midpoint).")
+    eps_override_val = st.slider("Custom ε", -3.0, 0.0, -1.0, step=0.05,
+                                   disabled=not eps_override_on,
+                                   help="Sign-constrained to be negative (a Giffen good is "
+                                        "implausible in furniture).")
     st.markdown("---")
     st.markdown("### Notes")
     st.caption(
@@ -205,6 +215,14 @@ with tab_sim:
             promo_active = True
             if level != "main_category":
                 promo_inherited_from = parent
+    # Custom override takes precedence over both the fitted ε and the promo swap.
+    # SE is set to 0 because the override is a user assumption, not an estimate.
+    override_active = False
+    eps_fitted = eps
+    if eps_override_on:
+        eps = float(eps_override_val)
+        se = 0.0
+        override_active = True
 
     # Observed price-variation support in the panel was [-30%, +43%] (5-95th pct).
     # Constant-elasticity demand q = q0 * (p/p0)^eps EXTRAPOLATES linearly in log
@@ -241,6 +259,14 @@ with tab_sim:
                   f"Treat with caution; this entity has insufficient or confounded price signal.")
         tone = "default"
     promo_prefix = ""
+    if override_active:
+        promo_prefix += (
+            f'<div style="font-size:12px;color:var(--red);font-weight:600;'
+            f'letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;">'
+            f'Custom ε override (fitted ε was <code>{eps_fitted:+.2f}</code>) '
+            f'&middot; CI suppressed'
+            f'</div>'
+        )
     if promo_active:
         inherit_note = (f" &middot; inherited from <b>{promo_inherited_from}</b>"
                         if promo_inherited_from else "")
@@ -339,6 +365,34 @@ with tab_method:
         '<p>R<sup>2</sup> gets the biggest weight but not a dominant one - a model that '
         'forecasts well via autoregressive features can still produce a worthless price '
         'coefficient. The other three terms guard against that failure mode.</p>',
+        unsafe_allow_html=True
+    )
+    st.markdown("### Where the headline ε sits - and an honest range")
+    st.markdown(
+        '<p>v9 reports a portfolio median ε of <code>-0.58</code>. A head-to-head on '
+        'the 500 items v4 (Poisson FE) covers tells a more nuanced story:</p>'
+        '<ul>'
+        '<li><b>Sign:</b> 100% agreement (500/500 items, 15/15 categories both negative)</li>'
+        '<li><b>Rank order:</b> Spearman 0.35 across categories - the same families '
+        'rank as more / less elastic in both models</li>'
+        '<li><b>Magnitude:</b> v4 median |ε| = <code>2.30</code>, v9 = <code>0.58</code> '
+        '- a 4&times; gap</li>'
+        '</ul>'
+        '<p>Two structural reasons explain the gap. (1) v9 fits log(sales+1) on OLS, '
+        'so the +1 shift on a panel that is 90% zero attenuates the price slope '
+        '(Silva &amp; Tenreyro 2006, "The Log of Gravity"). v4 uses a Poisson log link '
+        'and handles zeros natively. (2) v4 covers the top-500 high-volume items where '
+        'price signal is cleanest; v9 averages over all 3,000 items including the long '
+        'tail of weak-signal SKUs that pull the median toward zero.</p>'
+        '<p>Bijmolt, van Heerde &amp; Pieters (2005), the meta-analysis of '
+        '1,851 published elasticities, reports a durables-category mean near '
+        '<code>-1.0</code> to <code>-2.0</code>. The honest read on home24: '
+        '<b>v9 -0.58 is the lower bound</b> (attenuated by log-shift and tail items), '
+        '<b>v4 -2.30 is the upper bound</b> (clean signal but only 500 items), '
+        'and the true portfolio ε is plausibly in the <code>-1.0</code> to '
+        '<code>-1.5</code> range - inside the durables literature. The simulator '
+        'sidebar exposes a custom-ε override so a pricing analyst can stress-test '
+        'decisions across this band.</p>',
         unsafe_allow_html=True
     )
     st.markdown("### Hierarchical reconciliation")

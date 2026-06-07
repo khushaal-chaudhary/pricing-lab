@@ -338,9 +338,19 @@ Two slopes per category, 34 in total.
 
 **Why it failed cleanly.** R² did indeed climb. But the **per-category ε's collapsed to ~−0.005 to −0.02** — essentially zero. The lag features explain so much of next-week's sales that almost no variance is left for the price coefficient to explain. The price slope, fitted as the residual signal, is effectively ε ≈ 0 across every category.
 
-This is the **textbook "great forecaster, useless elasticity"** failure mode. R² and elasticity-credibility are in tension when the predictive features are too informative on a non-price axis.
+This is **direct signal theft**: lag-sales are an explicit predictor that absorbs the dependent variable's autocorrelation, leaving the price coefficient nothing to claim.
 
-**Why it was dropped from the headline leaderboard.** Reporting "v8 has high R² and ε ≈ 0" is *redundant* once v10's DML attenuation shows the same pattern more cleanly with a principled justification (Chernozhukov 2018 weak-treatment-exogeneity failure). v8 is the LightGBM version of the same pathology; v10 is the causal-ML version. The leaderboard keeps v10 (which has a clean theoretical story) and drops v8 (which is the same story without the theory).
+**How this differs from v10's attenuation.** v8 and v10 share a family of failure ("flexible model with too much information about the outcome steals price signal") but the mechanism and severity differ sharply:
+
+| Aspect | v8 (lag-features OLS) | v10 (DML with LGBM nuisance) |
+|---|---|---|
+| Lag-sales features used? | **Yes — directly** | No — same controls as v9 |
+| Mechanism | Direct theft via autocorrelation feature | Indirect leakage via flexible nuisance learner finding subtle nonlinear correlations between price and W controls |
+| Median ε across cats | ~ −0.01 (collapse) | −0.05 (v10a), −0.22 (v10b) |
+| Severity | Total — every cat ε ≈ 0 | Partial — sign preserved, magnitude shrunk |
+| Theory | None (empirical failure) | Chernozhukov 2018 §4.3 — weak-treatment-exogeneity failure |
+
+v8 is the *extreme* version; v10 is the *principled-method* version that still hits a milder form. The leaderboard keeps v10 (clean theoretical story, partial attenuation) and drops v8 (raw collapse, no new lesson once v10 is there).
 
 **v8 is preserved in the pipeline** (`models_v8.py`, `model_outputs/v8_cat.csv`, `model_outputs/v8_item.csv`) so the artefact trail is honest about what was built. The composite leaderboard reports only the curated set; v8 lives in the iteration log as "tried, learned, dropped."
 
