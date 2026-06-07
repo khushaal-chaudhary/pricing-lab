@@ -22,6 +22,7 @@ from app.charts import (variance_share_donut, leaderboard_bars,
                           category_elasticity_bars, demand_curve_fig,
                           revenue_curve_fig)
 from app.components import metric_card, pull_quote, chip
+from app.model_cards import ORDER as MODEL_ORDER, CARDS as MODEL_CARDS, render_card
 
 
 # ---- Password gate ---------------------------------------------------------
@@ -165,6 +166,42 @@ with tab_lead:
         "tight CI (0.07), full 3,000-item coverage, and a transparent partial-out "
         "of seasonality and events from the price coefficient."
     ), unsafe_allow_html=True)
+
+    # ---- Per-model explainer cards ---------------------------------------
+    st.markdown("## Approach explainers")
+    st.markdown(
+        '<p>Each model in the leaderboard is a different lens on the same question. '
+        'Step through them - or pick one - to see what went in, what came out, and how '
+        'it compares to v9.</p>',
+        unsafe_allow_html=True
+    )
+    if "card_i" not in st.session_state: st.session_state["card_i"] = 0
+    n_cards = len(MODEL_ORDER)
+    col_p, col_pick, col_n = st.columns([1, 4, 1])
+    with col_p:
+        if st.button("Prev approach", disabled=(st.session_state["card_i"] == 0)):
+            st.session_state["card_i"] -= 1; st.rerun()
+    with col_n:
+        if st.button("Next approach",
+                       disabled=(st.session_state["card_i"] >= n_cards - 1)):
+            st.session_state["card_i"] += 1; st.rerun()
+    with col_pick:
+        picked = st.selectbox(
+            "Pick an approach",
+            MODEL_ORDER,
+            index=st.session_state["card_i"],
+            label_visibility="collapsed",
+            format_func=lambda m: f"{m}  -  {MODEL_CARDS.get(m, {}).get('tagline', '')[:60]}",
+        )
+        if picked != MODEL_ORDER[st.session_state["card_i"]]:
+            st.session_state["card_i"] = MODEL_ORDER.index(picked); st.rerun()
+    st.markdown(
+        f'<div class="eyebrow" style="text-align:center;margin:4px 0 10px 0;">'
+        f'Approach {st.session_state["card_i"] + 1} / {n_cards}</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(render_card(MODEL_ORDER[st.session_state["card_i"]]),
+                  unsafe_allow_html=True)
 
 
 # === MMM DECOMPOSITION =====================================================
