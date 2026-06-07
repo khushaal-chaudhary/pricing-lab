@@ -22,9 +22,9 @@ def load_final() -> pd.DataFrame:
 def load_cat_v9() -> pd.DataFrame:
     return pd.read_csv(ART / "v9_cat.csv")
 
-@st.cache_data(show_spinner=False)
 def load_leaderboard() -> pd.DataFrame:
-    """Parse leaderboard.md table into a DataFrame."""
+    """Parse leaderboard.md table into a DataFrame. Uncached: file is tiny
+    and we want edits picked up on every rerun (especially after redeploy)."""
     text = (ROOT / "leaderboard.md").read_text(encoding="utf-8")
     lines = [l for l in text.splitlines() if l.strip().startswith("|")]
     if not lines: return pd.DataFrame()
