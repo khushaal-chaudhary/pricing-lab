@@ -107,8 +107,9 @@ with st.sidebar:
     st.markdown("### Notes")
     st.caption(
         "Reconciled elasticities (MinT, Wickramasuriya 2019) are coherent across "
-        "portfolio / main / sub / item levels. Headline category numbers come from "
-        "v9 (MMM-style decomposition); per-item from v6 ridge with sign-fallback."
+        "portfolio / main / sub / item levels. Category magnitudes come from v12 "
+        "(Poisson GLM with item-shop FE, median ε = -2.40); per-item dispersion "
+        "is v6 ridge anchored at the v12 category mean, with sign-fallback."
     )
 
 
@@ -645,7 +646,7 @@ with tab_method:
         'the remaining <b>89.7% are sellable-but-zero</b>. This 90% zero-inflation '
         'drives every downstream modelling choice. The +1 shift in <code>log(sales+1)</code> '
         'biases the price slope toward zero on heavily-zero data (Silva &amp; Tenreyro '
-        '2006), which is the root cause of the v9 / v4 magnitude gap.</p>',
+        '2006), which is the root cause of the v9 / v12 magnitude gap (-0.58 vs -2.40).</p>',
         unsafe_allow_html=True
     )
     st.markdown(
