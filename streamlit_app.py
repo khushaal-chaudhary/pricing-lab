@@ -369,7 +369,10 @@ with tab_mmm:
     st.markdown("## Variance share at the weekly portfolio level")
     st.markdown(
         '<p>v9 decomposes log(sales+1) into baseline + trend + seasonality + events + price. '
-        'Across the panel, calendar effects dominate price as a driver of weekly volume.</p>',
+        'Of the weekly demand <em>volatility</em>, calendar effects account for 96% and price for 4% '
+        '— price is not the main driver of week-to-week swings. That is orthogonal to elasticity: '
+        '<em>how</em> customers respond to a price level is a slope, not a variance share, and v12 '
+        'identifies it sharply at -2.40 once the count likelihood and item-shop FE are in place.</p>',
         unsafe_allow_html=True
     )
     shares = load_variance_share()
@@ -386,7 +389,7 @@ with tab_mmm:
                       unsafe_allow_html=True)
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
         st.markdown(metric_card("Price share", f"{shares.get('price', 0):.1f}%",
-                                  foot="What's left after the calendar is taken out",
+                                  foot="Share of weekly volatility - not the elasticity slope",
                                   accent=True, tone="red"),
                       unsafe_allow_html=True)
     st.markdown("## Per-category elasticities (v9)")
@@ -605,12 +608,14 @@ with tab_method:
         unsafe_allow_html=True
     )
     st.markdown(
-        '<p style="margin-top:14px;"><b>Where the variance actually lives.</b> '
-        'Once the panel was built, v9 decomposed weekly sales variance into '
-        'events 38% / seasonality 33% / trend 25% / price 4%. 96% of weekly '
-        'movement is calendar-driven; the 4% residual is what cleanly identifies '
-        'the elasticity. That is why MMM-style partial-out works and naive log-log '
-        'does not.</p>',
+        '<p style="margin-top:14px;"><b>Where the variance actually lives - and what that does (not) say about elasticity.</b> '
+        'v9 decomposes weekly sales <em>volatility</em> into events 38% / seasonality 33% / trend 25% / price 4%. '
+        '96% of week-to-week movement is calendar-driven, so price changes are not the main driver of swings. '
+        'But the elasticity is a slope, not a variance share — it asks "how do customers respond to a price level", '
+        'not "how much of the wobble is price". A low variance share is fully compatible with a sharp slope, '
+        'the way a few months of schooling explain little of the wage <em>variance</em> in a Mincer regression '
+        'yet identify a sharp return-to-schooling coefficient. v12 nails the slope at -2.40; v9 nails the '
+        'forecast. Both are useful, and neither contradicts the variance breakdown.</p>',
         unsafe_allow_html=True
     )
     st.markdown("### Composite metric")

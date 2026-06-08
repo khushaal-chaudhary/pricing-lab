@@ -14,7 +14,7 @@
 
 ## Slide 2 — Methodology (chosen: v9 MMM-style decomposition)
 
-Price is **4%** of the weekly variance in this panel. The other 96% is baseline / trend / seasonality / events. Any naive regression of sales on price gets attenuated because the other drivers eat the signal. The MMM-style decomposition isolates price from everything else, then reads off the slope:
+Of the weekly demand **volatility**, calendar effects account for 96% and price for 4%. That is about *what moves week-to-week* — not about how customers respond to a price level. Naive log-log regression confuses the two and gets attenuated because trend / season / events eat the signal. The MMM-style decomposition isolates price from everything else, then reads off the slope:
 
 ```
 log(q_ist) = α_(i,s)                            # item-shop baseline
@@ -43,7 +43,7 @@ Within-(item, shop) demeaning absorbs the baseline (Frisch-Waugh-Lovell). Per-it
 | % categories ε<0 | **100%** | 100% | 100% | 0% |
 | **Composite leaderboard** | **0.820** | 0.800 | 0.804 | 0.247 |
 
-**Variance share across the weekly panel:** events 38%, seasonality 33%, trend 25%, **price 4%**. The headline business insight: most of home24's weekly demand swing is calendar/event-driven, not price-driven — meaning price changes work *with* the seasonal/event cycle, not against it.
+**Variance share across the weekly panel (volatility, not slope):** events 38%, seasonality 33%, trend 25%, **price 4%**. Most of home24's weekly demand *wobble* is calendar/event-driven. That is a story about *what moves week-to-week*, not about elasticity — the price-response slope is a separate object, and v12 identifies it sharply at -2.40.
 
 **Robustness:** v10 (Double-ML with LightGBM nuisance) and v11 (Tweedie GLM with Mundlak FE) were both run as modern-causal-ML checks. Both confirm v9's sign on the majority of categories; neither dethrones v9 on the composite. v4 (Poisson GLM on top-500 items) lands at ε≈-2.3 — closer to Bijmolt — which bounds the true ε from below. Honest range: **[-2.3, -0.58]**.
 
@@ -197,11 +197,11 @@ This 90% zero-inflation drives every downstream modelling choice. `log(sales+1)`
 
 ### Variance share v9 recovered post-cleanup
 
-Once the panel was built, v9's decomposition showed where weekly sales variance actually lives:
+Once the panel was built, v9's decomposition showed where weekly demand *volatility* lives:
 
 - **Events 38%** (Black Friday / Cyber Monday / Christmas / Easter / COVID)
 - **Seasonality 33%** (smooth annual cycle, K=4 Fourier)
 - **Trend 25%** (slow 3-year drift)
 - **Price 4%**
 
-96% of weekly sales movement is calendar-driven. The 4% residual is what cleanly identifies the elasticity — which is why MMM-style partial-out works and naive log-log regression doesn't.
+96% of week-to-week movement is calendar-driven — price is not the main driver of swings. That is **not** a statement about elasticity. Variance share answers "what wobbles the series?"; elasticity answers "how do customers respond to a price level?". The two are orthogonal: a small variance share is fully compatible with a sharp slope (cf. years-of-schooling in a Mincer wage regression). The MMM partial-out cleanly isolates the slope so naive log-log attenuation does not, and v12's Poisson likelihood pins it at -2.40.
