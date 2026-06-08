@@ -277,11 +277,11 @@ CARDS: dict[str, dict[str, str]] = {
         "result": (
             "Holdout R^2 = 0.30 (lower than v9's 0.56 - but R^2 on log-space is the "
             "wrong metric for a count model; Tweedie deviance would favour v12). "
-            "100% cats negative, full coverage, CI 0.27. **Median ε = -2.40**, per-cat "
+            "100% cats negative, fit on all 3,000 items (17 category slopes), CI 0.27. **Median ε = -2.40**, per-cat "
             "range [-4.37, -0.99]. Composite = 0.708."
         ),
         "verdict": (
-            "The Bijmolt-range magnitude on full coverage. v12 vs v9 is the cleanest "
+            "The Bijmolt-range magnitude on the full panel. v12 vs v9 is the cleanest "
             "demonstration of the log+1 attenuation bias (Silva-Tenreyro 2006) on this "
             "panel: same design matrix, same controls, only the likelihood changes, and "
             "the magnitude jumps 4x. Honest split: **v9 ships as the deployable artefact** "

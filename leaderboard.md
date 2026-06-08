@@ -19,7 +19,7 @@ The composite scores **deployability** (predictive accuracy + sign + coverage + 
 | v10a_dml_log               |       0.5400 |          0.88 |             3000 |           0.090 |      0.7568 | ✗ DML on log-space     |
 | v10b_dml_tweedie           |       0.5500 |          0.82 |             3000 |           0.105 |      0.7507 | ~ partial (DML attenuated) |
 | v11_tweedie_glm            |       0.0029 |          0.35 |             3000 |           0.016 |      0.4063 | ~ Tweedie + broken Mundlak FE |
-| v12_poisson_fe             |       0.3036 |             1 |             3000 |           0.270 |      0.7080 | ✓ Poisson MLE + full coverage |
+| v12_poisson_fe             |       0.3036 |             1 |             3000 |           0.270 |      0.7080 | ✓ Poisson MLE on full 3,000-item panel |
 
 **Headline pair:** v9 wins the deployment composite (best forecaster on log-space, full coverage, tight CI) → **deployable artefact**. v12 wins on likelihood-appropriateness with full coverage and Bijmolt-aligned magnitude (-2.40) → **headline magnitude**. v4 independently confirms v12 on the top-500 items.
 
@@ -40,4 +40,4 @@ The composite scores **deployability** (predictive accuracy + sign + coverage + 
 - v7 LightGBM with monotonic price: ML model; ε via finite-difference on log_price.
 - v9 MMM-style decomposition: item-shop FE + linear trend + K=4 Fourier seasonality + holiday dummies (BFCM/Xmas/NYE/Easter/COVID) + category×log(price) split by promo. Isolates price signal from baseline/trend/season/events.
 - v11 Tweedie GLM with v9 design + Mundlak FE: linear sibling of v10b that swaps OLS-on-log(sales+1) for a Tweedie likelihood (var_power=1.5, log link) on raw counts. Single-stage GLM, no cross-fitting (no flexible nuisance to debias). Mundlak FE collapses the elasticity to ~0 because the log link breaks FWL — informative negative result, reported as a sensitivity.
-- v12 Poisson GLM with explicit item-shop FE (ppmlhdfe via pyfixest.fepois): v4's recipe scaled to all 3,000 items by absorbing FE iteratively instead of materialising the design matrix. Same regressors as v9; only likelihood differs. Median ε = -2.40 (Bijmolt range, full coverage).
+- v12 Poisson GLM with explicit item-shop FE (ppmlhdfe via pyfixest.fepois): v4's recipe scaled to the full 3,000-item panel by absorbing the ~20K item-shop intercepts iteratively (within-transformation) instead of materialising the design matrix. Estimates **17 category slopes** (same design as v9); coverage in the leaderboard refers to *estimation sample*, not distinct slopes. Median ε = -2.40 (Bijmolt range).

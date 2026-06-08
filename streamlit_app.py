@@ -251,7 +251,7 @@ with tab_xmod:
       <div style="padding:18px 20px; border:2px solid var(--red); background:var(--red-tint); border-radius:10px;">
         <div class="eyebrow" style="color:var(--red); font-weight:700;">v12 — headline magnitude</div>
         <div style="font-size:13.5px; color:var(--ink); line-height:1.5; margin-top:6px;">
-          Poisson GLM with explicit item-shop FE (ppmlhdfe). Correct likelihood for zero-inflated counts, full 3,000-item coverage. <b>Median ε = -2.40</b>.
+          Poisson GLM with explicit item-shop FE (ppmlhdfe). Correct likelihood for zero-inflated counts, fit on all 3,000 items (17 category slopes). <b>Median ε = -2.40</b>.
         </div>
       </div>
       <div style="padding:18px 20px; border:1px solid var(--rule); border-radius:10px;">
