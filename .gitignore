@@ -16,4 +16,4 @@ _audit_*.py
 
 # private presenter material — not for public repo / dashboard
 presenter_notes.md
-_lb_check.png
+_lb_*.png
