@@ -168,7 +168,7 @@ code, .stMarkdown code {{
     border-radius: 4px;
     padding: 20px 22px 22px 22px;
     position: relative;
-    min-height: 132px;
+    min-height: 168px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;

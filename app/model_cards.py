@@ -176,7 +176,7 @@ CARDS: dict[str, dict[str, str]] = {
         "result": (
             "Holdout R^2 = 0.62 (highest of any model), 100% cats negative, but "
             "coverage only 500 items, CI 0.21. Composite = 0.67. "
-            "Head-to-head with v9 on the 500-item overlap (our compare_v4_v9.py): "
+            "Head-to-head with v9 on the 500-item overlap (compare_v4_v9.py): "
             "sign agrees 100% (500/500 items, 15/15 cats); Spearman rank 0.35 across "
             "cats; median |ε| = 2.30 (vs v9 0.58 - a ~4x magnitude gap)."
         ),
@@ -294,7 +294,7 @@ CARDS: dict[str, dict[str, str]] = {
     "v11_tweedie_glm": {
         "tagline": "Tweedie GLM with v9's linear design - the count-likelihood sibling of v10b without the DML attenuation.",
         "layman": (
-            "We wondered: does v10b's modest elasticity (-0.22) come from the Tweedie "
+            "The question v11 isolates: does v10b's modest elasticity (-0.22) come from the Tweedie "
             "fix (right likelihood for zeros) or from DML's flexible-nuisance attenuation? "
             "v11 isolates the question - same v9 design matrix (Fourier seasonality, "
             "holidays, trend, cat x log_price split by promo) but fitted with a Tweedie "

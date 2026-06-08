@@ -3,7 +3,7 @@ Composite = 0.4·R² + 0.3·(% cat ε<0) + 0.2·coverage/3000 + 0.1·(1-CI/2). *
 
 The composite scores **deployability** (predictive accuracy + sign + coverage + stability). It does **not** score magnitude correctness — that's a theory question, not a metric question (see *Likelihood-appropriate* column below).
 
-> **Footnote on R²:** holdout R² is computed on `log(sales+1)` for every model so the rows are comparable. This **structurally favours OLS-on-log models** (v3/v5/v7/v9/v10a) over count-likelihood models (v4/v10b/v12), because log-of-a-Poisson-mean is a noisier predictor of log(sales+1) than direct OLS on log-space. We don't fix the metric to favour v12 — the dual-axis scoring (composite + likelihood-appropriate) handles the asymmetry honestly.
+> **Footnote on R²:** holdout R² is computed on `log(sales+1)` for every model so the rows are comparable. This **structurally favours OLS-on-log models** (v3/v5/v7/v9/v10a) over count-likelihood models (v4/v10b/v12), because log-of-a-Poisson-mean is a noisier predictor of log(sales+1) than direct OLS on log-space. I don't fix the metric to favour v12 — the dual-axis scoring (composite + likelihood-appropriate) handles the asymmetry honestly.
 
 | model                      |   holdout_r2 |   pct_cat_neg |   coverage_items |   boot_ci_width |   composite | likelihood-appropriate |
 |:---------------------------|-------------:|--------------:|-----------------:|----------------:|------------:|:----------------------:|

@@ -10,14 +10,14 @@
 
 ---
 
-## Slide 2 — How we measured it (in plain English)
+## Slide 2 — How I measured it (in plain English)
 
 Sales move for many reasons. Brand baseline. Slow growth over years. Christmas and Black Friday spikes. Summer lulls. AND price. If you regress sales on price alone, the price coefficient soaks up everything that happened to move *with* price — including January slowdowns and BFCM promo timing. That's why naive regressions show implausibly flat slopes.
 
-**Our approach is two steps:**
+**The approach is two steps:**
 
 1. **Strip out everything that isn't price** — item baseline, slow time trend, annual seasonality (4 Fourier harmonics), event spikes (Black Friday, Cyber Monday, Christmas, NYE, Easter, COVID), delivery promise, promotion state. What's left is the part of demand variation that price could plausibly explain.
-2. **Read the slope on what's left** — the price coefficient on that cleaned residual is the elasticity. We do this with a Poisson regression on raw unit counts, because 90% of sellable item-shop-days have zero sales and a log-transform would systematically pull the slope toward zero.
+2. **Read the slope on what's left** — the price coefficient on that cleaned residual is the elasticity. I do this with a Poisson regression on raw unit counts, because 90% of sellable item-shop-days have zero sales and a log-transform would systematically pull the slope toward zero.
 
 That recipe is **v12** in the leaderboard. It estimates 17 category-level slopes (same design as v9 — `log_price × main_category`, split by promo) but fits on the **full 3,000-item panel** via a high-dimensional fixed-effects solver (ppmlhdfe — Correia, Guimarães, Zylkin 2020). Reads as a single regression, but absorbs ~20,000 item-shop baseline intercepts internally — that's what unlocks the full sample compared to v4's top-500 subset.
 
@@ -25,7 +25,7 @@ That recipe is **v12** in the leaderboard. It estimates 17 category-level slopes
 
 ---
 
-## Slide 3 — What we found
+## Slide 3 — What I found
 
 **Per-category ε (v12, all 17 main categories, sorted most-to-least elastic).** All 17 are negative. Median ε = **-2.40**, range [-4.37, -0.99]. The most elastic categories sit around -4 (commodity-like, more substitutable), the least elastic around -1 (considered durable purchases with delivery friction).
 
@@ -46,7 +46,7 @@ That recipe is **v12** in the leaderboard. It estimates 17 category-level slopes
 The dashboard exposes the analysis in five tabs:
 
 - **Story** *(this carousel)* — 5 slides, written for a non-technical reader.
-- **Leaderboard** — all 13 models we tried, scored by a composite metric (forecast accuracy + correct sign + portfolio coverage + stability). v9 wins composite (best forecaster). v12 wins on magnitude correctness. Both ship.
+- **Leaderboard** — all 13 models I tried, scored by a composite metric (forecast accuracy + correct sign + portfolio coverage + stability). v9 wins composite (best forecaster). v12 wins on magnitude correctness. Both ship.
 - **ε across models** — side-by-side per-category bars for the 4 credible models (v4, v9, v10b, v12). v12 highlighted; the others are present so you can see the disagreement honestly.
 - **MMM decomposition** — variance share donut + per-category bars. Important framing: 96% of weekly *volatility* is calendar-driven, 4% is price. That's about *what wobbles the series week-to-week* — **not** about elasticity. The elasticity is a slope (how customers respond to a price level), and a small variance share is fully compatible with a sharp slope.
 - **Elasticity simulator** — pick any entity (item / sub-category / main-category / portfolio), drag a price slider, and see the predicted unit change and revenue impact with a 95% confidence band. Backed by the reconciled elasticities (hierarchically coherent across all four aggregation levels).
@@ -60,10 +60,10 @@ The two key numbers a stakeholder takes away from this dashboard: **ε = -2.4 at
 
 **Caveats — the honest gaps**
 
-1. **Cross-elasticities are ignored.** When a competitor item drops in price within the same category, our model attributes the lost units to the focal item's own elasticity. Own-ε therefore *overstates* the revenue impact of any single SKU's price move. Biggest honest gap in the analysis.
+1. **Cross-elasticities are ignored.** When a competitor item drops in price within the same category, the model attributes the lost units to the focal item's own elasticity. Own-ε therefore *overstates* the revenue impact of any single SKU's price move. Biggest honest gap in the analysis.
 2. **Prices aren't random.** Promotions are timed to expected demand. Item-shop fixed effects and the seasonality/event controls absorb most of this, but residual endogeneity remains. v10 (Double/Debiased ML) is the first-pass fix already in the leaderboard; a proper instrument (cost shocks, competitor price) is the next-level fix.
 3. **Sample covers COVID.** 2020 home-goods demand was inelastically high during lockdown; this drags the headline toward zero. Rolling re-estimation would let recent quarters drive the number.
-4. **R² interpretation.** Our composite metric scores R² on `log(sales+1)` which structurally favours log-space models over count models. v12's holdout R² (0.30) looks lower than v9's (0.56) — but it's the wrong scoring scale for a count model. We surface this explicitly in the Leaderboard tab's "Likelihood-appropriate" column.
+4. **R² interpretation.** The composite metric scores R² on `log(sales+1)` which structurally favours log-space models over count models. v12's holdout R² (0.30) looks lower than v9's (0.56) — but it's the wrong scoring scale for a count model. I surface this explicitly in the Leaderboard tab's "Likelihood-appropriate" column.
 
 **Next steps — roughly in priority order**
 
@@ -148,7 +148,7 @@ composite = 0.4·R²  +  0.3·(% cats ε<0)  +  0.2·(coverage/3000)  +  0.1·(1
 - **v10a / v10b — DML with LightGBM nuisance** — R² ~0.54 but materially attenuate ε (median -0.05 / -0.22). Nuisance learner over-absorbs price variance under log_price/promo collinearity (Chernozhukov 2018, §4.3). Reported as the attenuation lower bound.
 - **v11 — Tweedie GLM with Mundlak FE** — same v9 design with a Tweedie likelihood and Mundlak's mean-control as a stand-in for explicit FE. ε collapses to ~0. Useful negative result: confirms v12's clean -2.40 needs proper nonlinear FE (ppmlhdfe), not just the count likelihood.
 
-So the weights encode a deliberate stance: **we ship the deployable forecaster (v9) and the right-likelihood slope (v12) as a pair.** R² gets 0.4 — it must predict reasonably — but not 1.0, because high R² with the wrong-scale slope is misleading (see v9). The leaderboard's *Likelihood-appropriate* column is the lever that surfaces which models score the slope on the right scale. That's the answer to *"why two winners?"*
+So the weights encode a deliberate stance: **I ship the deployable forecaster (v9) and the right-likelihood slope (v12) as a pair.** R² gets 0.4 — it must predict reasonably — but not 1.0, because high R² with the wrong-scale slope is misleading (see v9). The leaderboard's *Likelihood-appropriate* column is the lever that surfaces which models score the slope on the right scale. That's the answer to *"why two winners?"*
 
 ---
 

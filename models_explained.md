@@ -8,9 +8,9 @@ A walk through every model in the pipeline (v0 → v10b), starting from "what is
 
 ### 1.1 The question
 
-We have 3,000 items sold across 8 shops over three years. The business question is one number per item:
+The panel covers 3,000 items sold across 8 shops over three years. The business question is one number per item:
 
-> If we raise this item's price by 10%, how many fewer units will we sell next week?
+> If we raise this item's price by 10%, how many fewer units will sell next week?
 
 That number is called **price elasticity of demand**, written ε. By convention it's negative — higher price → fewer units.
 
@@ -18,13 +18,13 @@ That number is called **price elasticity of demand**, written ε. By convention 
 - **ε = −2.0** means: 10% price increase → 20% volume drop. Demand is *elastic* (people are very price-sensitive).
 - **|ε| = 1** is the dividing line. Below it, raising price grows revenue. Above it, cutting price grows revenue.
 
-### 1.2 The data we have
+### 1.2 The data
 
 Five tables, joined into one big spreadsheet ("the panel") where every row is **one item, in one shop, in one week**:
 
 | Column | Where it comes from | What it tells us |
 |---|---|---|
-| `sales_count` | sales table | units sold that week — **what we want to predict** |
+| `sales_count` | sales table | units sold that week — **the prediction target** |
 | `price` | prices table | shelf price that week — **the lever** |
 | `promo` | derived from prices | 1 if discounted, 0 if regular |
 | `item_key`, `shop_id` | items + shops | which SKU, which shop |
@@ -37,7 +37,7 @@ After dropping rows where the item wasn't sellable, the panel is **~1.9 million 
 
 ### 1.3 The fundamental challenge — confounders
 
-If we just look at "price went down → sales went up," we get the wrong answer. Why?
+A naive "price went down → sales went up" reading gets the wrong answer. Why?
 
 Because **price moves don't happen in a vacuum**. The price gets cut when:
 - It's Black Friday (demand was going to spike anyway)
@@ -45,7 +45,7 @@ Because **price moves don't happen in a vacuum**. The price gets cut when:
 - A competitor launched something new (demand was leaking)
 - The category is in its seasonal peak (sofas in autumn, garden in spring)
 
-If we naively measure "price down, sales up" during Black Friday, we'd credit the price cut for the **entire** demand spike — most of which would have happened anyway because it's Black Friday.
+A naive "price down, sales up" reading during Black Friday credits the price cut for the **entire** demand spike — most of which would have happened anyway because it's Black Friday.
 
 These backstage drivers are called **confounders**. The whole game in elasticity modelling is **separating the price effect from the confounder effects**. Every model in the leaderboard is a different attempt at this separation.
 
@@ -67,23 +67,23 @@ Y = β₀ + β₁·X₁ + β₂·X₂ + ... + βₙ·Xₙ + error
 
 The algorithm picks the β's that make the model's predictions match the observed Y as closely as possible (smallest squared errors).
 
-### 2.2 Why we use log-price and log-sales
+### 2.2 Why log-price and log-sales
 
-We want a coefficient that means **"a 10% price change produces an X% sales change."** That's a percentage-to-percentage relationship, called **elasticity**.
+The target coefficient means **"a 10% price change produces an X% sales change."** That's a percentage-to-percentage relationship, called **elasticity**.
 
-The math trick: if you take logs of both sides, the coefficient on `log(price)` directly *is* the elasticity. So we run:
+The math trick: take logs of both sides, and the coefficient on `log(price)` directly *is* the elasticity. So the regression is:
 
 ```
 log(sales) = β₀ + ε · log(price) + (other stuff) + error
 ```
 
-And the value of ε we recover is the elasticity. No conversion needed. This is why every model in the leaderboard uses `log(price)` as an input — it's the form that makes ε pop out cleanly.
+The value of ε recovered is the elasticity. No conversion needed. This is why every model in the leaderboard uses `log(price)` as an input — it's the form that makes ε pop out cleanly.
 
-(Side note: we use `log(sales + 1)` rather than `log(sales)` so that zero-sales weeks don't break the logarithm. This introduces a small distortion that v10b's Tweedie objective avoids — more on that later.)
+(Side note: the regression uses `log(sales + 1)` rather than `log(sales)` so that zero-sales weeks don't break the logarithm. This introduces a small distortion that v10b's Tweedie objective avoids — more on that later.)
 
 ### 2.3 What R² means
 
-After the model is fit, we ask: **how much of the variation in Y did the model explain?**
+After the model is fit, R² answers: **how much of the variation in Y did the model explain?**
 
 - **R² = 1.0** means the model perfectly explains every wiggle in the data.
 - **R² = 0** means the model explains nothing — you'd do just as well predicting the average.
@@ -95,7 +95,7 @@ R² is computed on the **holdout** — the last 8 weeks of the panel that the mo
 
 This is the most important conceptual point in the project.
 
-We're not trying to **forecast** sales. We're trying to estimate **one number per item** — its elasticity. A model can predict sales beautifully while having a completely wrong elasticity coefficient. How? By using features that *steal* the price signal:
+The goal is not to **forecast** sales. The goal is to estimate **one number per item** — its elasticity. A model can predict sales beautifully while having a completely wrong elasticity coefficient. How? By using features that *steal* the price signal:
 
 - If the model has access to "last week's sales" as a feature, it'll predict this week's sales mostly from that, and the price coefficient collapses to near-zero — because most of the variance is already explained by the lag.
 - If the model uses a complex non-linear interaction between price and season, the season term may absorb the price effect during peak weeks.
@@ -129,9 +129,9 @@ This three-step recipe gives the same answer as a single big regression that inc
 
 ### 3.2 Applied to elasticity
 
-For us:
+Mapped to this problem:
 - Y = `log(sales)`
-- T = `log(price)` (the **treatment** — the thing we want to know the effect of)
+- T = `log(price)` (the **treatment** — the lever whose effect is being estimated)
 - W = everything else: item-shop baseline, trend, seasonality, holidays, promo, delivery days
 
 The recipe:
@@ -250,7 +250,7 @@ log(sales+1) = α_(i,s) + month_FE + Σ_c ε_c · log(price) · 1[cat = c] + err
 
 **Why it loses despite the highest R².** Coverage 500/3,000 = 0.17 costs it ~0.16 on the composite (which weights coverage at 0.2). A high R² on a curated subset isn't a deliverable for a brief that asks for **all** items.
 
-**What it teaches.** v4 is a **methodological sanity check** — "does a proper count model agree with our log-linear family on the items where it can fit?" The answer is **sign yes, magnitude no** (see comparison below). That divergence is itself the headline story for the elasticity range.
+**What it teaches.** v4 is a **methodological sanity check** — "does a proper count model agree with the log-linear family on the items where it can fit?" The answer is **sign yes, magnitude no** (see comparison below). That divergence is itself the headline story for the elasticity range.
 
 **Head-to-head v4 vs v9 on the 500-item overlap.**
 
@@ -413,7 +413,7 @@ This is the **same FWL logic as v9** — except steps 1 and 2 use LightGBM inste
 
 **Why R² is comparable to v9 (0.54 vs 0.56).** LightGBM nuisance predictions are roughly as accurate as the linear v9 structure on this panel. The flexibility doesn't help much because v9's controls were already rich.
 
-**Why ε attenuates (median −0.05 vs v9's −0.58).** This is the interesting failure. LightGBM is too greedy at step 1 — it learns to predict sales using week-of-year features that are *correlated with* promo timing, which is *correlated with* price moves. By the time we get to step 3, the price residual has very little signal left, and the slope shrinks toward zero. This is the **weak treatment exogeneity** failure mode (Chernozhukov 2018, §4.3) — flexible ML nuisance models can "steal" the treatment signal when controls are collinear with the treatment.
+**Why ε attenuates (median −0.05 vs v9's −0.58).** This is the interesting failure. LightGBM is too greedy at step 1 — it learns to predict sales using week-of-year features that are *correlated with* promo timing, which is *correlated with* price moves. By step 3, the price residual has very little signal left, and the slope shrinks toward zero. This is the **weak treatment exogeneity** failure mode (Chernozhukov 2018, §4.3) — flexible ML nuisance models can "steal" the treatment signal when controls are collinear with the treatment.
 
 **Why composite drops to 0.76.** Only 88% of categories have ε < 0 (two categories now show positive ε after attenuation), CI widens to 0.09. R² and coverage are fine. The attenuation specifically hurts the % cats neg term.
 
@@ -423,7 +423,7 @@ This is the **same FWL logic as v9** — except steps 1 and 2 use LightGBM inste
 
 ### v10b — DML with Tweedie y-stage (R² = 0.55, composite 0.751)
 
-**Goal.** "Same as v10a, but use a Tweedie loss in the y-stage so we model raw sales counts directly instead of `log(sales+1)`."
+**Goal.** "Same as v10a, but use a Tweedie loss in the y-stage so the model fits raw sales counts directly instead of `log(sales+1)`."
 
 **Recipe.** Same three-step DML, but step 1 uses LightGBM with a **Tweedie objective** (`tweedie_variance_power=1.5`) on raw `sales_count` instead of log-sales.
 
@@ -433,7 +433,7 @@ This is the **same FWL logic as v9** — except steps 1 and 2 use LightGBM inste
 
 **Why composite (0.751) is just below v10a.** Marginal R² improvement, but 82% cat-neg (vs v10a's 88%) — three categories now show positive ε. Tweedie's higher resolution on small categories actually reveals more cases where the price signal is too weak to identify cleanly.
 
-**The framing.** Truth most likely lies between v9 (−0.58) and v10b (−0.22). Both are negative, both are inelastic, both are consistent with the Bijmolt (2005) durables literature (which centres around −1.0 to −2.0 — we're *more* inelastic than the literature, which makes sense for furniture vs the wider durables category).
+**The framing.** Truth most likely lies between v9 (−0.58) and v10b (−0.22). Both are negative, both are inelastic, both are consistent with the Bijmolt (2005) durables literature (which centres around −1.0 to −2.0 — home24 is *more* inelastic than the literature, which makes sense for furniture vs the wider durables category).
 
 ---
 
