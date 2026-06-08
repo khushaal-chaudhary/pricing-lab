@@ -139,15 +139,16 @@ composite = 0.4·R²  +  0.3·(% cats ε<0)  +  0.2·(coverage/3000)  +  0.1·(1
 
 ### The R²-vs-elasticity-credibility trade-off (the key thing to anticipate in the call)
 
-**The instinct says higher R² = better model.** It's only half-true here:
+**The instinct says higher R² = better model.** It's only half-true here. The composite scores *deployability* (predict + sign + coverage + stability); it does not score *magnitude correctness* — that's a likelihood question.
 
-- v4 — Poisson FE on the top-500 items — has the **highest R² (0.62)**. Coverage 500/3,000 costs it 0.16 on the composite. But v4 is more interesting than the R²: its category elasticities are **4× more elastic than v9** (median |ε| 2.30 vs 0.58). v4 sits *inside* the Bijmolt (2005) durables range; v9 sits *below* it. v9's log-shift bias on zero-inflated counts pulls slopes toward zero (Silva & Tenreyro 2006); Poisson with log link has no such bias. **Honest range: −1.0 to −1.5** is the most defensible point estimate.
-- v7 — LightGBM with a monotonic constraint on price — R² 0.54, 100% category sign-validity, but per-item ε from a finite-difference probe lands in *flat regions* of the trees → ε ≈ 0 for many items. Decent forecaster, hollow elasticity.
-- v8 — LightGBM with lag-sales features — built, R² climbed, but ε collapsed to ~−0.01 across all categories. Lag features explain so much variance that the price slope has nothing left to claim. Dropped from the headline leaderboard because v10 demonstrates the same pathology with a cleaner theoretical justification.
-- v10a / v10b — DML with LightGBM nuisance — R² ~0.54 but materially **attenuate** ε (median −0.05 / −0.22). The nuisance learner over-absorbs price variance when log_price is collinear with promo/season/event controls (Chernozhukov 2018, §4.3). Same failure pattern as v8 in causal-ML form.
-- v9 — MMM decomposition — R² 0.56 with **full 3,000-item coverage**, tightest bootstrap CI (0.07 vs v7's 0.20), transparent linear partial-out that **isolates the price signal from baseline / trend / season / event variance**. Ships as headline, with v4 disclosed as the magnitude-upper-bound robustness check.
+- **v9 — MMM decomposition** — R² 0.56 with full 3,000-item coverage, tightest bootstrap CI (0.07), transparent linear partial-out. Wins composite. Ships as the **deployable forecaster** powering the simulator. Median ε = -0.58 — attenuated, because log(sales+1) on a 90%-zero panel biases the slope toward zero (Silva & Tenreyro 2006). Right forecaster, wrong magnitude.
+- **v12 — Poisson with explicit item-shop FE (ppmlhdfe)** — R² 0.30 (on log-space, the wrong scale for a count model — see leaderboard footnote). 100% cats negative, full 3,000-item coverage, median ε = **-2.40** — inside Bijmolt (2005). Ships as the **headline magnitude**. Same regressors as v9; only the likelihood differs.
+- **v4 — Poisson FE on top-500 items** — R² 0.62 (highest of any model, but on the densest 500 items where Poisson predicts well). Median ε = -2.30. Independently corroborates v12 within 0.1. Kept on the leaderboard as the reproducibility check.
+- **v7 — LightGBM monotonic** — R² 0.54, decent forecaster, but per-item ε from finite-difference lands in flat regions → ε ≈ 0 for many items. Hollow elasticity.
+- **v10a / v10b — DML with LightGBM nuisance** — R² ~0.54 but materially attenuate ε (median -0.05 / -0.22). Nuisance learner over-absorbs price variance under log_price/promo collinearity (Chernozhukov 2018, §4.3). Reported as the attenuation lower bound.
+- **v11 — Tweedie GLM with Mundlak FE** — same v9 design with a Tweedie likelihood and Mundlak's mean-control as a stand-in for explicit FE. ε collapses to ~0. Useful negative result: confirms v12's clean -2.40 needs proper nonlinear FE (ppmlhdfe), not just the count likelihood.
 
-So the weights encode a deliberate stance: **we are not building a forecaster, we are estimating a causal coefficient.** R² gets 0.4 (must predict reasonably) but not 1.0 (because R² alone can be gamed by autoregressive features that crowd out price). The other 0.6 ensures the ε we ship has the right sign, covers the portfolio, and is stable. That's the answer to *"why didn't you pick the model with the highest R²?"*
+So the weights encode a deliberate stance: **we ship the deployable forecaster (v9) and the right-likelihood slope (v12) as a pair.** R² gets 0.4 — it must predict reasonably — but not 1.0, because high R² with the wrong-scale slope is misleading (see v9). The leaderboard's *Likelihood-appropriate* column is the lever that surfaces which models score the slope on the right scale. That's the answer to *"why two winners?"*
 
 ---
 
@@ -163,7 +164,7 @@ Five parquet files, all keyed on `item_key`: master (3,000 items × 17 main_cate
 - Only **10.3% have any sale**
 - The remaining **89.7% are sellable-but-zero** (item was listed, in stock, viewable — just didn't sell)
 
-This 90% zero-inflation drives every downstream modelling choice. `log(sales+1)` is the only way to keep OLS tractable, but the +1 shift biases the price slope toward zero on heavily-zero data (Silva & Tenreyro 2006). That bias is the root cause of the v9 / v4 magnitude gap (-0.58 vs -2.30): v9 uses log+1 on the full panel and attenuates; v4 uses a Poisson MLE on the top-500 items where the count likelihood can fit cleanly.
+This 90% zero-inflation drives every downstream modelling choice. `log(sales+1)` is the only way to keep OLS tractable, but the +1 shift biases the price slope toward zero on heavily-zero data (Silva & Tenreyro 2006). That bias is the root cause of the v9 / v12 magnitude gap (-0.58 vs -2.40): v9 uses log+1 on the full panel and attenuates; v12 uses a Poisson MLE with explicit item-shop FE (ppmlhdfe) on the same full panel where the count likelihood handles zeros natively. v4 corroborates v12 (-2.30 on the top-500 dense slice) — same recipe, smaller sample.
 
 ### Other findings worth knowing
 
