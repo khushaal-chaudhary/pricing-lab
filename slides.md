@@ -1,7 +1,3 @@
-# home24 — Price Elasticity Analysis (5 slides)
-
----
-
 ## Slide 1 — The question and the headline
 
 **Question:** How much does demand change when home24 changes a price?
