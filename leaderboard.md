@@ -11,7 +11,7 @@ The composite scores **deployability** (predictive accuracy + sign + coverage + 
 | v7_lightgbm_monotone       |       0.5362 |             1 |             2999 |           0.2   |      0.8044 | ✗ log-space MSE        |
 | v5_promo_split             |       0.5077 |             1 |             3000 |           0.07  |      0.7996 | ✗ log+1 OLS on counts  |
 | v3_fe_category_interaction |       0.5005 |             1 |             3000 |           0.055 |      0.7975 | ✗ log+1 OLS on counts  |
-| v4_poisson_fe              |       0.6227 |             1 |              500 |           0.212 |      0.6718 | **✓ Poisson MLE**      |
+| v4_poisson_fe              |       0.6227 |             1 |              500 |           0.212 |      0.6718 | ✓ Poisson MLE          |
 | v1_pooled_ols              |      -0.0297 |             1 |             3000 |           0.002 |      0.5999 | ✗ log+1 OLS on counts  |
 | v6_ridge_per_item          |      -0.2925 |             1 |             2985 |           0.993 |      0.5494 | ✗ log+1 ridge          |
 | v2_per_item_ols            |    -201.318  |             1 |             2985 |           1.194 |      0.5393 | ✗ log+1 OLS, overfit   |
@@ -19,7 +19,7 @@ The composite scores **deployability** (predictive accuracy + sign + coverage + 
 | v10a_dml_log               |       0.5400 |          0.88 |             3000 |           0.090 |      0.7568 | ✗ DML on log-space     |
 | v10b_dml_tweedie           |       0.5500 |          0.82 |             3000 |           0.105 |      0.7507 | ~ partial (DML attenuated) |
 | v11_tweedie_glm            |       0.0029 |          0.35 |             3000 |           0.016 |      0.4063 | ~ Tweedie + broken Mundlak FE |
-| v12_poisson_fe             |       0.3036 |             1 |             3000 |           0.270 |      0.7080 | **✓ Poisson MLE + full coverage** |
+| v12_poisson_fe             |       0.3036 |             1 |             3000 |           0.270 |      0.7080 | ✓ Poisson MLE + full coverage |
 
 **Headline pair:** v9 wins the deployment composite (best forecaster on log-space, full coverage, tight CI) → **deployable artefact**. v12 wins on likelihood-appropriateness with full coverage and Bijmolt-aligned magnitude (-2.40) → **headline magnitude**. v4 independently confirms v12 on the top-500 items.
 
