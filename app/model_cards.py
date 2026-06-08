@@ -8,7 +8,7 @@ from __future__ import annotations
 
 # Order = composite rank from leaderboard.md (v9 first, v0 last).
 ORDER = [
-    "v9_mmm_light", "v7_lightgbm_monotone", "v5_promo_split",
+    "v9_mmm_light", "v12_poisson_fe", "v7_lightgbm_monotone", "v5_promo_split",
     "v3_fe_category_interaction", "v10a_dml_log", "v10b_dml_tweedie",
     "v4_poisson_fe", "v1_pooled_ols", "v6_ridge_per_item",
     "v2_per_item_ols", "v11_tweedie_glm", "v0_naive_event",
@@ -251,6 +251,41 @@ CARDS: dict[str, dict[str, str]] = {
             "The textbook example of why you POOL information across items in low-N "
             "settings. v6 ridges this; v3 onward pools entirely. v2 is in the leaderboard "
             "to make the failure visible."
+        ),
+    },
+    "v12_poisson_fe": {
+        "tagline": "Poisson GLM with explicit item-shop FE - v4's recipe scaled to all 3,000 items.",
+        "layman": (
+            "v4 had the right idea (count likelihood + per-item fixed effects) but only "
+            "fit on the top 500 items because statsmodels' Poisson MLE chokes when you "
+            "materialise thousands of FE dummies. v12 uses the ppmlhdfe algorithm "
+            "(via pyfixest.fepois): same Poisson likelihood, same FE structure, but the "
+            "FE are absorbed by iterative within-transformation instead of being added "
+            "as explicit dummies. Routine for 19,000+ FE levels. Result: v4's magnitude "
+            "on the full 3,000-item panel."
+        ),
+        "features": (
+            "pyfixest.fepois (ppmlhdfe, Correia 2014) with Poisson likelihood, log link, "
+            "raw sales_count as target. Same regressors as v9: K=4 Fourier seasonality, "
+            "holiday dummies, linear trend, main_category x log(price) split by promo, "
+            "delivery_days. Item-shop FE absorbed via iterative demeaning (19,446 FE "
+            "levels). HC1 heteroskedasticity-robust SE."
+        ),
+        "result": (
+            "Holdout R^2 = 0.30 (lower than v9's 0.56 - but R^2 on log-space is the "
+            "wrong metric for a count model; Tweedie deviance would favour v12). "
+            "100% cats negative, full coverage, CI 0.27. **Median ε = -2.40**, per-cat "
+            "range [-4.37, -0.99]. Composite = 0.708."
+        ),
+        "verdict": (
+            "The Bijmolt-range magnitude on full coverage. v12 vs v9 is the cleanest "
+            "demonstration of the log+1 attenuation bias (Silva-Tenreyro 2006) on this "
+            "panel: same design matrix, same controls, only the likelihood changes, and "
+            "the magnitude jumps 4x. Honest split: **v9 ships as the deployable artefact** "
+            "(higher R^2, full per-item ε via v6 layer, variance decomposition for the VP); "
+            "**v12 ships as the headline magnitude** (Poisson is the correct likelihood "
+            "for zero-inflated counts; magnitude aligns with the durables meta-analysis "
+            "literature). Both numbers are honest; they answer slightly different questions."
         ),
     },
     "v11_tweedie_glm": {

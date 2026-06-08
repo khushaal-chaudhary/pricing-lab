@@ -1,0 +1,11 @@
+{
+  "model": "v12_poisson_fe",
+  "holdout_r2": 0.3036,
+  "pct_cat_neg": 1.0,
+  "coverage_items": 3000,
+  "boot_ci_width": 0.27,
+  "composite": 0.708,
+  "median_eps": -2.395599773685927,
+  "median_abs_eps": 2.395599773685927,
+  "pct_cats_negative": 1.0
+}

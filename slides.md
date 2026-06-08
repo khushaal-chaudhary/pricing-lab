@@ -14,7 +14,7 @@
 
 ## Slide 2 — Methodology (chosen: v9 MMM-style decomposition)
 
-I borrowed the marketing-mix-modeling frame from my consulting work: decompose `log(sales+1)` into baseline + trend + seasonality + events + **price**, so the price coefficient is what's left after the other demand drivers are accounted for.
+Price is **4%** of the weekly variance in this panel. The other 96% is baseline / trend / seasonality / events. Any naive regression of sales on price gets attenuated because the other drivers eat the signal. The MMM-style decomposition isolates price from everything else, then reads off the slope:
 
 ```
 log(q_ist) = α_(i,s)                            # item-shop baseline
@@ -26,7 +26,7 @@ log(q_ist) = α_(i,s)                            # item-shop baseline
            + γ · delivery_days + ε_ist
 ```
 
-Within-(item, shop) demeaning absorbs the baseline; per-item ε is layered via ridge regression on the same panel (2,976 of 3,000 items) with category fallback for the remaining 24 (0.8%). Fit in `statsmodels.OLS` — fully transparent, no MCMC needed for this scale.
+Within-(item, shop) demeaning absorbs the baseline (Frisch-Waugh-Lovell). Per-item ε is layered via ridge regression on the same panel (2,693 items) with v9 category fallback for the remaining 307 (10%) where ridge produced a positive or unstable slope. Fit in `statsmodels.OLS` — fully transparent, no MCMC needed at this scale.
 
 ---
 
@@ -44,6 +44,8 @@ Within-(item, shop) demeaning absorbs the baseline; per-item ε is layered via r
 | **Composite leaderboard** | **0.820** | 0.800 | 0.804 | 0.247 |
 
 **Variance share across the weekly panel:** events 38%, seasonality 33%, trend 25%, **price 4%**. The headline business insight: most of home24's weekly demand swing is calendar/event-driven, not price-driven — meaning price changes work *with* the seasonal/event cycle, not against it.
+
+**Robustness:** v10 (Double-ML with LightGBM nuisance) and v11 (Tweedie GLM with Mundlak FE) were both run as modern-causal-ML checks. Both confirm v9's sign on the majority of categories; neither dethrones v9 on the composite. v4 (Poisson GLM on top-500 items) lands at ε≈-2.3 — closer to Bijmolt — which bounds the true ε from below. Honest range: **[-2.3, -0.58]**.
 
 ---
 
@@ -70,20 +72,22 @@ Regular-price elasticities (top 10 main categories, sorted most-to-least elastic
 
 **Pricing implication:** for inelastic categories (|ε|<1) marginal list-price increases grow revenue. Promo ε ≥ |1| in 11/17 categories means current discount depths roughly self-fund in volume but rarely earn the discount back outright — there is room to tighten promo depth in inelastic categories without losing units.
 
+> **So what:** im14 (629 items, regular ε=-0.45) — a 5% list-price increase predicts ~2.3% unit drop → net revenue lift in the low single digits weekly, holding mix constant. Trial on the top 10 SKUs in im14 first; measure against a matched holdout.
+
 ---
 
 ## Slide 5 — Caveats & next steps
 
 **Caveats**
-1. **Endogeneity:** prices are not random — promo timing co-moves with expected demand. Item-shop FE + the seasonality/event terms absorb a lot of this, but residual endogeneity remains. A Double-ML or IV approach (Chernozhukov 2018) is the next-level fix.
-2. **Cross-elasticities** (substitutes/complements within category) are ignored — own-ε overstates revenue impact of a single SKU price move.
-3. **MMM decomposition is on the weekly aggregate.** Item-level price share would be higher than 4% — but at the portfolio level, **calendar effects dwarf price** as a driver of weekly volume.
+1. **Cross-elasticities** (substitutes/complements within category) are ignored — own-ε overstates revenue impact of any single SKU price move. Biggest honest gap in the analysis.
+2. **Endogeneity:** prices are not random — promo timing co-moves with expected demand. Item-shop FE + the seasonality/event terms absorb most of this; residual endogeneity remains. v10 DML is the first-pass fix already implemented; a proper IV (e.g. cost shocks, competitor price) is the next-level fix.
+3. **Sample period covers COVID.** 2020 home-goods demand was inelastically high during lockdown; this drags median ε toward zero. Rolling re-estimation would let recent quarters drive the headline.
 
 **Next steps**
-- A/B price experiment on 1–2 high-volume SKUs in the inelastic categories to validate ε empirically.
-- Bayesian hierarchical MMM (PyMC-Marketing) for partial pooling of item-level ε with proper posterior CIs.
-- Cross-elasticity matrix at sub-category level for top-volume SKUs.
-- Rolling 6-month re-estimation; monitor regime change month-over-month.
+- **A/B price experiment** on 5–10 high-volume SKUs in inelastic categories (im14, im17) to validate ε empirically and measure cross-effects.
+- **Cross-elasticity matrix** at sub-category level for top-volume SKUs — closes the biggest caveat above.
+- **Scale v4's Poisson recipe** to all 3000 items (currently top-500 only) — would tighten the [-2.3, -0.58] range and likely move the headline closer to Bijmolt durables.
+- **Rolling 6-month re-estimation** + regime-change monitoring; surface in the dashboard.
 
 ---
 
@@ -104,12 +108,6 @@ A demand curve slopes down — ε < 0 is the only economically sensible sign for
 1. **`finalize.py` → deliverable column `elasticity_item`:** sign-clean by construction. Positive item ε is replaced with the item's main_category v9 ε, with `source = "category_fe_positive_fallback"` logged on the row. **0 / 3,000 positives in the published column.**
 2. **`app/lib.py:get_eps()` → dashboard simulator:** when the reconciled ε is non-negative, climb the hierarchy (item → sub_cat → main_cat → portfolio) and return the first negative parent. Main_cat is always negative, so the ladder terminates. The simulator never plots an upward-sloping demand curve.
 3. **`diagnose.py` → diagnostics:** HARD check `all_items_negative` on the deliverable column; SOFT check on reconciled columns (positives are *informative*, not failures — they flag where the data is too thin to identify ε against the seasonality/event controls).
-
-### Interview talking points
-
-- **"Why does the reconciled file contain positives if the deliverable does not?"** Because MinT is variance-optimal but unconstrained on sign. A non-negative-constrained reconciliation (Panagiotelis 2021 probabilistic, or NNLS-MinT) would enforce it; that's on the roadmap.
-- **"Why not just drop positive-ε items?"** Dropping ~10% of items would bias the portfolio aggregate toward the easier-to-identify SKUs. Falling back to the parent category preserves coverage and is honest about identification — the source column records when we did it.
-- **"Could MMM controls be hiding real positive ε (e.g. Veblen / Giffen behaviour)?"** Possible in luxury, not in mass-market furniture. We treat positive ε as a data-thinness signal, not a behavioural finding. An A/B price experiment is the only definitive test.
 
 ---
 

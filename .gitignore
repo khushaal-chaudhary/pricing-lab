@@ -13,3 +13,6 @@ __pycache__/
 # scratch
 _audit_*.py
 *.tmp
+
+# private presenter material — not for public repo / dashboard
+presenter_notes.md

@@ -22,6 +22,19 @@ def load_final() -> pd.DataFrame:
 def load_cat_v9() -> pd.DataFrame:
     return pd.read_csv(ART / "v9_cat.csv")
 
+@st.cache_data(show_spinner=False)
+def load_cross_model_cats() -> pd.DataFrame:
+    """Per-category regular ε for the 4 credible models, long-format for plotting."""
+    frames = []
+    for m in ["v4", "v9", "v10b", "v12"]:
+        p = ART / f"{m}_cat.csv"
+        if not p.exists():
+            continue
+        d = pd.read_csv(p)[["main_category", "elasticity"]].copy()
+        d["model"] = m
+        frames.append(d)
+    return pd.concat(frames, ignore_index=True)
+
 def load_leaderboard() -> pd.DataFrame:
     """Parse leaderboard.md table into a DataFrame. Uncached: file is tiny
     and we want edits picked up on every rerun (especially after redeploy)."""

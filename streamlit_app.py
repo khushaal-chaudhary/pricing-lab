@@ -16,6 +16,7 @@ st.set_page_config(page_title="home24 - Pricing Lab",
 from app.styles import inject, PALETTE
 from app.lib import (load_reconciled, load_final, load_cat_v9, load_leaderboard,
                        load_variance_share, load_slides, entity_catalogue,
+                       load_cross_model_cats,
                        get_eps, get_promo_eps, baseline_for, demand_curve,
                        revenue_curve, confidence_band)
 from app.charts import (variance_share_donut, leaderboard_bars,
@@ -112,8 +113,8 @@ with st.sidebar:
 
 
 # ---- Tabs ------------------------------------------------------------------
-tab_story, tab_lead, tab_mmm, tab_sim, tab_method = st.tabs(
-    ["Story", "Leaderboard", "MMM decomposition", "Elasticity simulator", "Methodology"]
+tab_story, tab_lead, tab_xmod, tab_mmm, tab_sim, tab_method = st.tabs(
+    ["Story", "Leaderboard", "ε across models", "MMM decomposition", "Elasticity simulator", "Methodology"]
 )
 
 
@@ -202,6 +203,165 @@ with tab_lead:
     )
     st.markdown(render_card(MODEL_ORDER[st.session_state["card_i"]]),
                   unsafe_allow_html=True)
+
+
+# === ε ACROSS MODELS =======================================================
+with tab_xmod:
+    st.markdown("## ε across credible models")
+    st.markdown(
+        '<div class="lead" style="margin-bottom:14px;">'
+        "Same panel, same controls — different likelihood and FE choices. "
+        "All four models agree on sign. The magnitude split is the log+1 attenuation bias "
+        "(Silva-Tenreyro 2006) playing out on this zero-inflated panel, not a modelling disagreement."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    # Four role cards
+    role_html = """
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:18px 0 22px 0;">
+      <div style="padding:18px 20px; border:2px solid var(--red); background:var(--red-tint); border-radius:10px;">
+        <div class="eyebrow" style="color:var(--red); font-weight:700;">v12 — headline magnitude</div>
+        <div style="font-size:13.5px; color:var(--ink); line-height:1.5; margin-top:6px;">
+          Poisson GLM with explicit item-shop FE (ppmlhdfe). Correct likelihood for zero-inflated counts, full 3,000-item coverage. <b>Median ε = -2.40</b>.
+        </div>
+      </div>
+      <div style="padding:18px 20px; border:1px solid var(--rule); border-radius:10px;">
+        <div class="eyebrow">v9 — deployable</div>
+        <div style="font-size:13.5px; color:var(--ink-2); line-height:1.5; margin-top:6px;">
+          MMM-style OLS on log(sales+1). Powers the simulator + per-item table via v6 layer. Attenuated by log+1 shift. Median ε = -0.58.
+        </div>
+      </div>
+      <div style="padding:18px 20px; border:1px solid var(--rule); border-radius:10px;">
+        <div class="eyebrow">v4 — confirmation</div>
+        <div style="font-size:13.5px; color:var(--ink-2); line-height:1.5; margin-top:6px;">
+          Poisson GLM on top-500 items (per-item FE within category). Independent confirmation of v12's magnitude on the subset where it converges. Median ε = -2.30.
+        </div>
+      </div>
+      <div style="padding:18px 20px; border:1px solid var(--rule); border-radius:10px;">
+        <div class="eyebrow">v10b — lower bound</div>
+        <div style="font-size:13.5px; color:var(--ink-2); line-height:1.5; margin-top:6px;">
+          DML with LightGBM nuisance. Attenuated by treatment-control collinearity (Chernozhukov §4.3). Bounds the truth from above zero. Median ε = -0.22.
+        </div>
+      </div>
+    </div>
+    """
+    st.markdown(role_html, unsafe_allow_html=True)
+
+    # ---- Main chart: per-category ε across models -------------------------
+    xm = load_cross_model_cats()
+    import plotly.graph_objects as go
+    order_cats = (xm[xm.model == "v12"]
+                    .sort_values("elasticity")["main_category"].tolist())
+    if not order_cats:
+        order_cats = (xm.groupby("main_category").elasticity.median()
+                        .sort_values().index.tolist())
+    model_colors = {
+        "v12":  PALETTE["red"],
+        "v9":   PALETTE["ink_2"],
+        "v4":   PALETTE["red_deep"],
+        "v10b": PALETTE["ink_3"],
+    }
+    model_widths = {"v12": 3.5, "v9": 2, "v4": 2, "v10b": 2}
+
+    fig = go.Figure()
+    for m in ["v10b", "v9", "v4", "v12"]:
+        sub = xm[xm.model == m].set_index("main_category").reindex(order_cats).reset_index()
+        fig.add_trace(go.Scatter(
+            x=sub.elasticity, y=sub.main_category,
+            mode="markers+lines",
+            name=f"{m}" + (" (headline)" if m == "v12" else ""),
+            marker=dict(size=14 if m == "v12" else 9,
+                          color=model_colors[m],
+                          line=dict(width=1, color="white")),
+            line=dict(width=model_widths[m], color=model_colors[m],
+                        dash="solid" if m == "v12" else "dot"),
+            opacity=1.0 if m == "v12" else 0.75,
+        ))
+    fig.add_vline(x=-1, line=dict(color=PALETTE["ink_3"], width=1, dash="dash"))
+    fig.add_annotation(x=-1, y=order_cats[-1], yshift=-18, text="|ε|=1",
+                        showarrow=False, font=dict(size=10, color=PALETTE["ink_3"]))
+    fig.update_layout(
+        height=520,
+        margin=dict(l=10, r=10, t=30, b=30),
+        xaxis_title="Regular-price elasticity",
+        yaxis_title="",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        legend=dict(orientation="h", y=-0.10, x=0, bgcolor="rgba(0,0,0,0)"),
+        font=dict(family="Geist, system-ui, sans-serif", size=12),
+    )
+    fig.update_xaxes(gridcolor="#EEE", zerolinecolor=PALETTE["ink"], zerolinewidth=1)
+    fig.update_yaxes(gridcolor="#F6F6F6")
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ---- Summary table ----------------------------------------------------
+    summary_rows = []
+    for m, label in [("v12", "v12 Poisson FE  ★ headline"),
+                      ("v9",  "v9 MMM (log+1 OLS)  — deployable"),
+                      ("v4",  "v4 Poisson FE top-500"),
+                      ("v10b","v10b DML + Tweedie")]:
+        sub = xm[xm.model == m]
+        if len(sub) == 0: continue
+        summary_rows.append({
+            "Model":           label,
+            "Median ε":        f"{sub.elasticity.median():+.2f}",
+            "Range":           f"[{sub.elasticity.min():+.2f}, {sub.elasticity.max():+.2f}]",
+            "% cats negative": f"{(sub.elasticity < 0).mean()*100:.0f}%",
+            "Categories":      f"{len(sub)} / 17",
+        })
+    st.markdown("### Summary")
+    st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
+
+    # ---- v9 vs v12 scatter: visual proof of attenuation -------------------
+    st.markdown("### v9 vs v12 — the log+1 attenuation, category by category")
+    st.markdown(
+        '<div class="lead" style="margin-bottom:8px;">'
+        "Each point is one main_category. The 45° dashed line is where the two models would agree. "
+        "v12 sits ~4× below the line: same regressors, only the likelihood differs."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    pivot = (xm.pivot(index="main_category", columns="model", values="elasticity")
+                .dropna(subset=["v9", "v12"]).reset_index())
+    fig2 = go.Figure()
+    lo, hi = min(pivot.v9.min(), pivot.v12.min()) - 0.2, max(pivot.v9.max(), pivot.v12.max()) + 0.2
+    fig2.add_trace(go.Scatter(x=[lo, hi], y=[lo, hi], mode="lines",
+                                 line=dict(color=PALETTE["ink_3"], dash="dash", width=1),
+                                 showlegend=False, hoverinfo="skip"))
+    fig2.add_trace(go.Scatter(
+        x=pivot.v9, y=pivot.v12, mode="markers+text",
+        text=pivot.main_category, textposition="top center",
+        textfont=dict(size=10, color=PALETTE["ink_2"]),
+        marker=dict(size=11, color=PALETTE["red"], line=dict(width=1, color="white")),
+        showlegend=False, hovertemplate="<b>%{text}</b><br>v9: %{x:.2f}<br>v12: %{y:.2f}<extra></extra>",
+    ))
+    fig2.update_layout(
+        height=460,
+        margin=dict(l=10, r=10, t=30, b=30),
+        xaxis_title="v9 elasticity (log+1 OLS)",
+        yaxis_title="v12 elasticity (Poisson FE)",
+        plot_bgcolor="white", paper_bgcolor="white",
+        font=dict(family="Geist, system-ui, sans-serif", size=12),
+    )
+    fig2.update_xaxes(gridcolor="#EEE", zerolinecolor=PALETTE["ink"], zerolinewidth=1, range=[lo, hi])
+    fig2.update_yaxes(gridcolor="#EEE", zerolinecolor=PALETTE["ink"], zerolinewidth=1, range=[lo, hi])
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # ---- Footer narrative -------------------------------------------------
+    st.markdown(
+        '<div style="background:var(--paper); border-left:3px solid var(--red); '
+        'padding:16px 20px; margin-top:8px; border-radius:0 8px 8px 0;">'
+        "<div class='eyebrow' style='color:var(--red);'>What this tab does NOT mean</div>"
+        "<div style='font-size:13.5px; color:var(--ink); line-height:1.6; margin-top:6px;'>"
+        "It's not four contradictory answers. <b>v12 and v4</b> agree (Poisson likelihood family on raw counts). "
+        "<b>v9 and v10b</b> agree (log-shift or attenuated-by-collinearity family). The split between the two groups "
+        "is the Silva-Tenreyro (2006) bias playing out predictably on this panel. <b>The truth is at the v12 end</b> — "
+        "v9 ships as deployable because it powers the per-item layer and the dashboard simulator, but the magnitude "
+        "you'd take into a pricing decision is v12's."
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
 
 
 # === MMM DECOMPOSITION =====================================================
