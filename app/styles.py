@@ -168,6 +168,11 @@ code, .stMarkdown code {{
     border-radius: 4px;
     padding: 20px 22px 22px 22px;
     position: relative;
+    min-height: 132px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    box-sizing: border-box;
 }}
 .card.accent::before {{
     content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
