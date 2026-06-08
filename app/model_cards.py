@@ -16,7 +16,7 @@ ORDER = [
 
 CARDS: dict[str, dict[str, str]] = {
     "v9_mmm_light": {
-        "tagline": "Marketing-Mix-Modelling-style decomposition - the headline winner.",
+        "tagline": "Marketing-Mix-Modelling-style decomposition - the deployable forecaster.",
         "layman": (
             "Sales move for many reasons: brand baseline, slow growth over years, "
             "Christmas / Black Friday spikes, school holidays, AND price. "
@@ -41,7 +41,10 @@ CARDS: dict[str, dict[str, str]] = {
         "verdict": (
             "Wins on the full composite: decent prediction, perfect sign discipline, "
             "complete coverage, narrow uncertainty. Transparent partial-out makes it "
-            "defensible to a VP without hand-waving. The headline number that ships."
+            "defensible to a VP without hand-waving. Ships as the deployable forecaster "
+            "powering the simulator. The headline magnitude (-2.40) comes from v12 because "
+            "log(sales+1) attenuates the slope on this 90%-zero panel (Silva-Tenreyro 2006); "
+            "v9 stays for the forecast + variance decomposition."
         ),
     },
     "v7_lightgbm_monotone": {
@@ -63,8 +66,8 @@ CARDS: dict[str, dict[str, str]] = {
         "verdict": (
             "Excellent predictor, wider CI because the elasticity comes from "
             "finite-differencing a learned surface rather than a closed-form coefficient. "
-            "v9 wins for pricing because the coefficient is closed-form interpretable, "
-            "not just the prediction."
+            "v9 and v12 win for pricing because their coefficients are closed-form "
+            "interpretable, not just the predictions."
         ),
     },
     "v5_promo_split": {
@@ -131,8 +134,8 @@ CARDS: dict[str, dict[str, str]] = {
         "verdict": (
             "Robustness check, not headline. The -0.05 median is a known DML failure "
             "mode under weak treatment exogeneity (Chernozhukov 2018, §4.3): "
-            "flexible nuisances steal the treatment signal. v9 + v10 together: truth "
-            "is in [-0.58, -0.05], both negative, both inelastic."
+            "flexible nuisances steal the treatment signal. With v12's -2.40 as the "
+            "right-likelihood anchor, v10a is the attenuation floor on this panel."
         ),
     },
     "v10b_dml_tweedie": {
@@ -152,9 +155,9 @@ CARDS: dict[str, dict[str, str]] = {
             "Median ε ~ -0.22. Composite = 0.75."
         ),
         "verdict": (
-            "Lands between v9 (-0.58) and v10a (-0.05). Suggests v9's log-shift "
-            "explains some of the gap. Reported as a sensitivity, not headline - the "
-            "DML attenuation issue still applies."
+            "Lands between v9 (-0.58) and v10a (-0.05), and far from v12's -2.40 - "
+            "confirms DML attenuation under log_price/promo collinearity is real. "
+            "Reported as a sensitivity, not headline."
         ),
     },
     "v4_poisson_fe": {
@@ -178,12 +181,12 @@ CARDS: dict[str, dict[str, str]] = {
             "cats; median |ε| = 2.30 (vs v9 0.58 - a ~4x magnitude gap)."
         ),
         "verdict": (
-            "Cleanest signal on a narrow slice. Sign and rank order agree with v9 "
-            "but magnitude is ~4x stronger - likely because Poisson handles the "
+            "Cleanest count-likelihood signal on a narrow slice. Sign and rank order "
+            "agree with v9; magnitude (-2.30) is ~4x stronger because Poisson handles "
             "zero-inflation natively while v9 attenuates from the log+1 shift "
-            "(Silva and Tenreyro 2006). Useful as an UPPER-bound: v9 -0.58 lower "
-            "bound, v4 -2.30 upper bound, truth plausibly -1.0 to -1.5 (inside the "
-            "Bijmolt 2005 durables range)."
+            "(Silva-Tenreyro 2006). v12 scales this exact recipe to all 3,000 items "
+            "(median ε = -2.40) - v4 corroborates v12 on its 500-item slice and is "
+            "kept on the leaderboard as the independent reproducibility check."
         ),
     },
     "v1_pooled_ols": {
@@ -316,9 +319,10 @@ CARDS: dict[str, dict[str, str]] = {
             "cannot partial out the between-item variation for each category's slope, and "
             "the elasticities collapse. v4 sidesteps this by using EXPLICIT per-item FE "
             "within category - which is also why v4 only scales to the top-500 items "
-            "(MLE intractable on the full panel). Confirms v4's clean -2.30 magnitude "
-            "relies on proper nonlinear FE, not just the count likelihood. v9 + v4 stay "
-            "the headline bracket."
+            "in statsmodels. v12 then takes that explicit-FE recipe and scales it to "
+            "the full 3,000 via ppmlhdfe. v11 confirms the clean -2.40 magnitude "
+            "relies on proper nonlinear FE, not just the count likelihood. v9 "
+            "(forecast) + v12 (slope) are the headline pair."
         ),
     },
     "v0_naive_event": {
@@ -363,7 +367,7 @@ def render_card(model: str) -> str:
   <div style="font-size:13.5px; color:var(--ink-2); line-height:1.6; margin-bottom:14px;">{c['features']}</div>
   <div class="metric-label">Result</div>
   <div style="font-size:13.5px; color:var(--ink-2); line-height:1.6; margin-bottom:14px;">{c['result']}</div>
-  <div class="metric-label" style="color:var(--red);">Verdict vs v9</div>
+  <div class="metric-label" style="color:var(--red);">Verdict / role</div>
   <div style="font-size:13.5px; color:var(--ink); line-height:1.6; font-weight:500;">{c['verdict']}</div>
 </div>
 """

@@ -120,6 +120,24 @@ tab_story, tab_lead, tab_xmod, tab_mmm, tab_sim, tab_method = st.tabs(
 
 # === STORY =================================================================
 with tab_story:
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(metric_card("Headline elasticity",
+                                  "ε = -2.40",
+                                  foot="median across 17 main categories (v12)",
+                                  accent=True, tone="red"),
+                      unsafe_allow_html=True)
+    with c2:
+        st.markdown(metric_card("Reads as",
+                                  "10% price cut → +24% units",
+                                  foot="constant-elasticity demand"),
+                      unsafe_allow_html=True)
+    with c3:
+        st.markdown(metric_card("Coverage",
+                                  "3,000 / 3,000 items",
+                                  foot="per-item ε in elasticities_final.csv"),
+                      unsafe_allow_html=True)
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
     slides = load_slides()
     n = len(slides)
     if "slide_i" not in st.session_state: st.session_state["slide_i"] = 0
@@ -376,13 +394,34 @@ with tab_xmod:
 
 # === MMM DECOMPOSITION =====================================================
 with tab_mmm:
-    st.markdown("## Variance share at the weekly portfolio level")
+    st.markdown("## v9's variance decomposition (a complementary view to v12's slope)")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(metric_card("This tab answers",
+                                  "What wobbles weekly sales?",
+                                  foot="not 'what's the elasticity slope?'"),
+                      unsafe_allow_html=True)
+    with c2:
+        st.markdown(metric_card("Calendar share",
+                                  "96%",
+                                  foot="events + season + trend"),
+                      unsafe_allow_html=True)
+    with c3:
+        st.markdown(metric_card("Price share",
+                                  "4%",
+                                  foot="this is volatility - NOT the slope",
+                                  accent=True, tone="red"),
+                      unsafe_allow_html=True)
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
     st.markdown(
-        '<p>v9 decomposes log(sales+1) into baseline + trend + seasonality + events + price. '
-        'Of the weekly demand <em>volatility</em>, calendar effects account for 96% and price for 4% '
-        '— price is not the main driver of week-to-week swings. That is orthogonal to elasticity: '
-        '<em>how</em> customers respond to a price level is a slope, not a variance share, and v12 '
-        'identifies it sharply at -2.40 once the count likelihood and item-shop FE are in place.</p>',
+        '<p><b>Why this tab still matters even though v12 is the headline.</b> v9 produces an additive '
+        'decomposition because it fits log(sales+1) with OLS — every term is a direct variance contribution. '
+        'v12 (Poisson with log link) does not produce a comparable additive split, so the variance picture '
+        'below is a v9 byproduct. Read the two together: v9 tells you <em>where the weekly wobble lives</em> '
+        '(96% calendar, 4% price); v12 tells you the <em>slope</em> on the price residual (ε = -2.40). '
+        'A small variance share is fully compatible with a sharp slope — the same way years-of-schooling '
+        'explains little of the wage <em>variance</em> in a Mincer regression yet identifies a sharp '
+        'return-to-schooling coefficient.</p>',
         unsafe_allow_html=True
     )
     shares = load_variance_share()
@@ -399,7 +438,7 @@ with tab_mmm:
                       unsafe_allow_html=True)
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
         st.markdown(metric_card("Price share", f"{shares.get('price', 0):.1f}%",
-                                  foot="Share of weekly volatility - not the elasticity slope",
+                                  foot="Share of weekly volatility - separate from the slope (v12: -2.40)",
                                   accent=True, tone="red"),
                       unsafe_allow_html=True)
     st.markdown("## Per-category elasticities (v9)")
@@ -560,6 +599,24 @@ with tab_sim:
 # === METHODOLOGY ===========================================================
 with tab_method:
     st.markdown("## Methodology")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(metric_card("Headline magnitude",
+                                  "ε = -2.40",
+                                  foot="v12 - Poisson on raw counts",
+                                  accent=True, tone="red"),
+                      unsafe_allow_html=True)
+    with c2:
+        st.markdown(metric_card("Deployable forecaster",
+                                  "v9 MMM",
+                                  foot="best composite, full per-item coverage"),
+                      unsafe_allow_html=True)
+    with c3:
+        st.markdown(metric_card("Models tried",
+                                  "13",
+                                  foot="v0 -> v12; full leaderboard in tab 2"),
+                      unsafe_allow_html=True)
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
     st.markdown(
         '<p>The pipeline ships <b>13 models</b> (v0 through v12). Two carry the headline. '
         '<b>v9</b> — an MMM-style decomposition with item-shop fixed effects, K=4 Fourier '
@@ -641,30 +698,28 @@ with tab_method:
     )
     st.markdown("### Where the headline ε sits - and an honest range")
     st.markdown(
-        '<p>v9 reports a portfolio median ε of <code>-0.58</code>. A head-to-head on '
-        'the 500 items v4 (Poisson FE) covers tells a more nuanced story:</p>'
+        '<p>The headline magnitude is <b>ε = -2.40</b> (v12 median across 17 main categories). '
+        'Four credible models triangulate it:</p>'
         '<ul>'
-        '<li><b>Sign:</b> 100% agreement (500/500 items, 15/15 categories both negative)</li>'
-        '<li><b>Rank order:</b> Spearman 0.35 across categories - the same families '
-        'rank as more / less elastic in both models</li>'
-        '<li><b>Magnitude:</b> v4 median |ε| = <code>2.30</code>, v9 = <code>0.58</code> '
-        '- a 4&times; gap</li>'
+        '<li><b>v12 (Poisson, full panel):</b> median ε = <code>-2.40</code>, per-cat range '
+        '[-4.37, -0.99]. Right likelihood, full coverage. Headline.</li>'
+        '<li><b>v4 (Poisson, top-500):</b> median ε = <code>-2.30</code>. Same recipe, '
+        'narrower slice. Within 0.1 of v12 - independent corroboration.</li>'
+        '<li><b>v9 (OLS on log(sales+1), full panel):</b> median ε = <code>-0.58</code>. '
+        'Log-shift on a 90%-zero panel attenuates the slope (Silva &amp; Tenreyro 2006). '
+        'Ships as the deployable forecaster, not the magnitude.</li>'
+        '<li><b>v10b (DML with Tweedie nuisance):</b> median ε = <code>-0.22</code>. '
+        'Further attenuated by flexible-nuisance over-absorption under log_price/promo '
+        'collinearity (Chernozhukov 2018 §4.3). Reported as the lower bound.</li>'
         '</ul>'
-        '<p>Two structural reasons explain the gap. (1) v9 fits log(sales+1) on OLS, '
-        'so the +1 shift on a panel that is 90% zero attenuates the price slope '
-        '(Silva &amp; Tenreyro 2006, "The Log of Gravity"). v4 uses a Poisson log link '
-        'and handles zeros natively. (2) v4 covers the top-500 high-volume items where '
-        'price signal is cleanest; v9 averages over all 3,000 items including the long '
-        'tail of weak-signal SKUs that pull the median toward zero.</p>'
         '<p>Bijmolt, van Heerde &amp; Pieters (2005), the meta-analysis of '
-        '1,851 published elasticities, reports a durables-category mean near '
-        '<code>-1.0</code> to <code>-2.0</code>. The honest read on home24: '
-        '<b>v9 -0.58 is the lower bound</b> (attenuated by log-shift and tail items), '
-        '<b>v4 -2.30 is the upper bound</b> (clean signal but only 500 items), '
-        'and the true portfolio ε is plausibly in the <code>-1.0</code> to '
-        '<code>-1.5</code> range - inside the durables literature. The simulator '
-        'sidebar exposes a custom-ε override so a pricing analyst can stress-test '
-        'decisions across this band.</p>',
+        '1,851 published elasticities, reports a durables-category range of '
+        '<code>-1.0</code> to <code>-2.0</code>. home24 lands just outside the elastic '
+        'end - consistent with a competitive online furniture market in 2018-2020. '
+        'Honest cross-model range: <b>[-2.40, -0.22]</b>; all four are negative, '
+        'two count-likelihood models agree sharply at ~-2.3. The simulator sidebar '
+        'exposes a custom-ε override so a pricing analyst can stress-test decisions '
+        'across this band.</p>',
         unsafe_allow_html=True
     )
     st.markdown("### Hierarchical reconciliation")

@@ -34,8 +34,9 @@ def variance_share_donut(shares: dict[str, float]) -> go.Figure:
 
 def leaderboard_bars(df: pd.DataFrame, metric: str = "composite") -> go.Figure:
     df = df.sort_values(metric, ascending=True)
-    colors = [PALETTE["red"] if i == len(df) - 1 else PALETTE["ink_2"]
-              for i in range(len(df))]
+    headline_pair = {"v9_mmm_light", "v12_poisson_fe"}
+    colors = [PALETTE["red"] if m in headline_pair else PALETTE["ink_2"]
+              for m in df["model"]]
     fig = go.Figure(go.Bar(
         x=df[metric], y=df["model"], orientation="h",
         marker=dict(color=colors, line=dict(width=0)),
