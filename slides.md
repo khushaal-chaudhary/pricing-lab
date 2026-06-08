@@ -165,3 +165,45 @@ composite = 0.4·R²  +  0.3·(% cats ε<0)  +  0.2·(coverage/3000)  +  0.1·(1
 - v9 — MMM decomposition — R² 0.56 with **full 3,000-item coverage**, tightest bootstrap CI (0.07 vs v7's 0.20), transparent linear partial-out that **isolates the price signal from baseline / trend / season / event variance**. Ships as headline, with v4 disclosed as the magnitude-upper-bound robustness check.
 
 So the weights encode a deliberate stance: **we are not building a forecaster, we are estimating a causal coefficient.** R² gets 0.4 (must predict reasonably) but not 1.0 (because R² alone can be gamed by autoregressive features that crowd out price). The other 0.6 ensures the ε we ship has the right sign, covers the portfolio, and is stable. That's the answer to *"why didn't you pick the model with the highest R²?"*
+
+---
+
+## Appendix — EDA findings that shaped every modelling decision
+
+Five parquet files, all keyed on `item_key`: master (3,000 items × 17 main_categories × 81 sub_categories × 123 brands), prices, deliverytimes, sales_data, sellability. Panel grain is **(item, shop, date)** — the same item has different prices and delivery promises across the 8 shops.
+
+### The single most important finding
+
+**The `sales_data` table only contains rows with `sales_count ≥ 1`.** Absence of a row means zero sales, not missing data. Outer-joining sales onto the sellable item-shop-day grid materialises the zeros — and the result is brutal:
+
+- 12.75M sellable item-shop-days in the panel
+- Only **10.3% have any sale**
+- The remaining **89.7% are sellable-but-zero** (item was listed, in stock, viewable — just didn't sell)
+
+This 90% zero-inflation drives every downstream modelling choice. `log(sales+1)` is the only way to keep OLS tractable, but the +1 shift biases the price slope toward zero on heavily-zero data (Silva & Tenreyro 2006). That bias is the root cause of the v9 / v4 magnitude gap (-0.58 vs -2.30): v9 uses log+1 on the full panel and attenuates; v4 uses a Poisson MLE on the top-500 items where the count likelihood can fit cleanly.
+
+### Other findings worth knowing
+
+| Finding | Cleanup / decision |
+|---|---|
+| Dates stored as `YYYYMMDD` integers, not Unix timestamps | Parse with `format="%Y%m%d"` |
+| Date ranges don't overlap fully (prices/delivery from 2017-11, sellability from 2018-01) | Analysis window is the tightest overlap: **2018-01-01 → 2020-12-17**, ~1,080 days |
+| 16.13% of item-shop-days are unsellable (out of stock / paused) | Drop unsellable rows — they can't have sold, so they'd bias ε toward zero |
+| 4.25% of price records are non-positive (n=13,813) — data errors | Drop before `log(price)` |
+| Price-change distribution: 5–95th pct = **[-30%, +43%]** | Simulator clamps to this support; anything outside is flagged as out-of-support extrapolation |
+| `item_price_special` is null on non-promo days | Derived `is_promo = item_price_special.notna()` — v5/v9 split ε into regular vs promo slopes |
+| 5% of `delivery_days` null; range [3, **1003**] — 1003 is a sentinel | Median-impute, keep missing-indicator, cap at 90 |
+| Median 99 price records per item across shops | Enough within-item price variation to identify per-item ε; pooled to category for stability |
+| 17 main_categories, but `im14` has 629 items while others have <50 | Headline at main_category (always well-sampled); per-item from v6 ridge with sign-fallback |
+| Last 60 days as holdout per (item, shop) | Time-aware split prevents leakage into the R² metric |
+
+### Variance share v9 recovered post-cleanup
+
+Once the panel was built, v9's decomposition showed where weekly sales variance actually lives:
+
+- **Events 38%** (Black Friday / Cyber Monday / Christmas / Easter / COVID)
+- **Seasonality 33%** (smooth annual cycle, K=4 Fourier)
+- **Trend 25%** (slow 3-year drift)
+- **Price 4%**
+
+96% of weekly sales movement is calendar-driven. The 4% residual is what cleanly identifies the elasticity — which is why MMM-style partial-out works and naive log-log regression doesn't.

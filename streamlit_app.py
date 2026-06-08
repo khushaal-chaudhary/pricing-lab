@@ -396,6 +396,63 @@ with tab_method:
         'counterparts as a robustness check.</p>',
         unsafe_allow_html=True
     )
+    st.markdown("### EDA findings that shaped every modelling decision")
+    st.markdown(
+        '<p>Five parquet files keyed on <code>item_key</code>: master '
+        '(3,000 items / 17 main_categories / 81 sub_categories / 123 brands), '
+        'prices, deliverytimes, sales_data, sellability. Panel grain is '
+        '<b>(item, shop, date)</b> - the same item has different prices and '
+        'delivery promises across the 8 shops, so aggregating by item alone '
+        'would destroy the cross-sectional variation needed for elasticity.</p>'
+        '<p><b>The single most consequential finding:</b> the <code>sales_data</code> '
+        'table only contains rows with <code>sales_count &ge; 1</code>. Absence of '
+        'a row means zero sales, not missing data. Outer-joining sales onto the '
+        'sellable item-shop-day grid materialises the zeros - and the result is '
+        'brutal: of 12.75M sellable item-shop-days, only <b>10.3% have any sale</b>; '
+        'the remaining <b>89.7% are sellable-but-zero</b>. This 90% zero-inflation '
+        'drives every downstream modelling choice. The +1 shift in <code>log(sales+1)</code> '
+        'biases the price slope toward zero on heavily-zero data (Silva &amp; Tenreyro '
+        '2006), which is the root cause of the v9 / v4 magnitude gap.</p>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<table style="width:100%;font-size:13px;border-collapse:collapse;">'
+        '<thead><tr style="border-bottom:2px solid var(--ink);">'
+        '<th style="text-align:left;padding:6px 8px;">Finding</th>'
+        '<th style="text-align:left;padding:6px 8px;">Cleanup / decision</th></tr></thead>'
+        '<tbody>'
+        '<tr><td style="padding:6px 8px;">Dates stored as YYYYMMDD integers, not Unix timestamps</td>'
+        '<td style="padding:6px 8px;">Parse with <code>format="%Y%m%d"</code></td></tr>'
+        '<tr><td style="padding:6px 8px;">Date ranges do not overlap (sellability starts latest)</td>'
+        '<td style="padding:6px 8px;">Window = 2018-01-01 to 2020-12-17 (~1,080 days)</td></tr>'
+        '<tr><td style="padding:6px 8px;">16.13% of item-shop-days are unsellable</td>'
+        '<td style="padding:6px 8px;">Drop unsellable rows (would bias &epsilon; toward zero)</td></tr>'
+        '<tr><td style="padding:6px 8px;">4.25% of price records are non-positive (n=13,813)</td>'
+        '<td style="padding:6px 8px;">Drop before log(price)</td></tr>'
+        '<tr><td style="padding:6px 8px;">Price-change support: 5-95th pct = [-30%, +43%]</td>'
+        '<td style="padding:6px 8px;">Simulator clamps to this range; flags out-of-support</td></tr>'
+        '<tr><td style="padding:6px 8px;"><code>item_price_special</code> null on non-promo days</td>'
+        '<td style="padding:6px 8px;">Derived <code>is_promo</code>; v5 / v9 split &epsilon; reg vs promo</td></tr>'
+        '<tr><td style="padding:6px 8px;">5% null <code>delivery_days</code>; max = 1003 (sentinel)</td>'
+        '<td style="padding:6px 8px;">Median-impute, keep missing-indicator, cap at 90</td></tr>'
+        '<tr><td style="padding:6px 8px;">Median 99 price records per item</td>'
+        '<td style="padding:6px 8px;">Enough within-item variation; pool to category for stability</td></tr>'
+        '<tr><td style="padding:6px 8px;">17 main_cats - im14 has 629 items, others have &lt;50</td>'
+        '<td style="padding:6px 8px;">Headline at main_category; per-item via v6 ridge + sign-fallback</td></tr>'
+        '<tr><td style="padding:6px 8px;">Last 60 days held out per (item, shop)</td>'
+        '<td style="padding:6px 8px;">Time-aware split prevents leakage into R<sup>2</sup></td></tr>'
+        '</tbody></table>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<p style="margin-top:14px;"><b>Where the variance actually lives.</b> '
+        'Once the panel was built, v9 decomposed weekly sales variance into '
+        'events 38% / seasonality 33% / trend 25% / price 4%. 96% of weekly '
+        'movement is calendar-driven; the 4% residual is what cleanly identifies '
+        'the elasticity. That is why MMM-style partial-out works and naive log-log '
+        'does not.</p>',
+        unsafe_allow_html=True
+    )
     st.markdown("### Composite metric")
     st.code("composite = 0.4 * R^2 + 0.3 * (% cats eps<0) + 0.2 * coverage/3000 + 0.1 * (1 - CI/2)")
     st.markdown(
