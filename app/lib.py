@@ -47,8 +47,9 @@ def load_leaderboard() -> pd.DataFrame:
         cells = [c.strip() for c in l.strip("|").split("|")]
         if len(cells) == len(header): rows.append(cells)
     df = pd.DataFrame(rows, columns=header)
+    text_cols = {"model", "likelihood-appropriate"}
     for c in df.columns:
-        if c != "model":
+        if c not in text_cols:
             df[c] = pd.to_numeric(df[c], errors="coerce")
     return df.sort_values("composite", ascending=False).reset_index(drop=True)
 

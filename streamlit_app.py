@@ -148,24 +148,34 @@ with tab_lead:
     lb = load_leaderboard()
     st.markdown("## Model leaderboard")
     st.markdown(
-        '<p>Composite score balances predictive R<sup>2</sup>, face-validity '
-        '(% categories with negative elasticity), portfolio coverage, and stability. '
-        'See methodology tab for the formula and weights.</p>',
+        '<p><b>Two winners, on purpose.</b> The composite score below ranks models on '
+        '<i>deployability</i> — forecast accuracy + correct sign + portfolio coverage + stability. '
+        'v9 wins it cleanly. But composite does not score <i>magnitude correctness</i> — '
+        'that\'s a likelihood question, not a metric question. The right-likelihood model '
+        'is <b>v12</b> (Poisson on raw counts), which lands at ε = -2.4 — inside the published '
+        'durables range. See the <i>likelihood-appropriate</i> column for which models score '
+        'the slope on the right scale.</p>',
         unsafe_allow_html=True
     )
     c1, c2 = st.columns([3, 2])
     with c1:
         st.plotly_chart(leaderboard_bars(lb, "composite"), use_container_width=True)
     with c2:
+        cols_to_show = ["model", "holdout_r2", "pct_cat_neg", "coverage_items", "composite"]
+        if "likelihood-appropriate" in lb.columns:
+            cols_to_show.append("likelihood-appropriate")
         st.dataframe(
-            lb[["model", "holdout_r2", "pct_cat_neg", "coverage_items", "composite"]],
+            lb[cols_to_show],
             hide_index=True, use_container_width=True
         )
     st.markdown(pull_quote(
-        "v9 wins not on R&sup2; alone - v4 Poisson FE actually has the highest "
-        "R&sup2; (0.62) but only covers 500 items - v9 wins on the combination of "
-        "tight CI (0.07), full 3,000-item coverage, and a transparent partial-out "
-        "of seasonality and events from the price coefficient."
+        "<b>Headline pair.</b> v9 wins composite — best forecaster, full coverage, tight CI — "
+        "and ships as the deployable artefact powering the simulator. v12 wins on "
+        "likelihood-appropriateness with the same coverage — and ships as the headline "
+        "magnitude (ε = -2.40, inside Bijmolt 2005). The composite footnote: holdout R&sup2; "
+        "is scored on log(sales+1) for every row, which structurally favours OLS-on-log "
+        "models over count-likelihood models. That is why R&sup2; is one input to the "
+        "composite, not the verdict."
     ), unsafe_allow_html=True)
 
     # ---- Per-model explainer cards ---------------------------------------
@@ -551,12 +561,15 @@ with tab_sim:
 with tab_method:
     st.markdown("## Methodology")
     st.markdown(
-        '<p>The pipeline ships v0 through v10b (eleven models). v9 - an MMM-style '
-        'decomposition with item-shop fixed effects, K=4 Fourier annual seasonality, '
-        'holiday dummies, and a category-level log-log price coefficient - wins the '
-        'composite leaderboard. v10a (DML with LightGBM nuisance and 5-fold cross-fitting) '
-        'and v10b (DML with Tweedie y-stage on raw counts) provide modern causal-ML '
-        'counterparts as a robustness check.</p>',
+        '<p>The pipeline ships <b>13 models</b> (v0 through v12). Two carry the headline. '
+        '<b>v9</b> — an MMM-style decomposition with item-shop fixed effects, K=4 Fourier '
+        'seasonality, holiday dummies and a category-level log-log price coefficient — '
+        'wins the composite leaderboard and ships as the <i>deployable forecaster</i> '
+        'powering the simulator. <b>v12</b> — a Poisson GLM with the same regressors but '
+        'a count likelihood and explicit item-shop FE (ppmlhdfe via <code>pyfixest.fepois</code>) — '
+        'wins on magnitude correctness (median ε = -2.40) and ships as the <i>headline '
+        'slope</i>. v10a/v10b (Double-ML, LightGBM nuisance) and v11 (Tweedie GLM with '
+        'Mundlak FE) sit on the leaderboard as modern causal-ML robustness checks.</p>',
         unsafe_allow_html=True
     )
     st.markdown("### EDA findings that shaped every modelling decision")

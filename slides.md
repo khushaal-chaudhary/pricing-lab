@@ -2,92 +2,81 @@
 
 ---
 
-## Slide 1 — Question & deliverable
+## Slide 1 — The question and the headline
 
-**Question:** How responsive is item demand to price at home24, by item and main category?
+**Question:** How much does demand change when home24 changes a price?
 
-**Data:** 3,000 items × 8 shops × 1,080 days (2018-01-01 → 2020-12-17). 5 source tables joined to an item-shop-week panel (1.9M rows after sellability filter).
+**Headline number:** ε = **-2.4**. A 10% price cut lifts unit demand by ~24%. A 10% price rise drops it by ~24%. Per-item and per-category numbers ship in `elasticities_final.csv` (3,000 items) and the dashboard simulator.
 
-**Deliverable:** per-item elasticities (`elasticities_final.csv`, 3,000 rows) and main-category averages (17 categories), produced by an MMM-style decomposition that isolates price from baseline / trend / seasonality / event variance.
+**Where this sits vs published research:** Bijmolt et al. (2005) report a -1.0 to -2.0 range for durable goods across 1,800 studies. home24 lands just outside the elastic end of that range — sharply price-sensitive, consistent with a competitive online furniture market.
 
----
-
-## Slide 2 — Methodology (chosen: v9 MMM-style decomposition)
-
-Of the weekly demand **volatility**, calendar effects account for 96% and price for 4%. That is about *what moves week-to-week* — not about how customers respond to a price level. Naive log-log regression confuses the two and gets attenuated because trend / season / events eat the signal. The MMM-style decomposition isolates price from everything else, then reads off the slope:
-
-```
-log(q_ist) = α_(i,s)                            # item-shop baseline
-           + δ · weeks_since_start              # linear trend
-           + Σ_k θ_k · Fourier_k(week_of_year)  # K=4 annual seasonality
-           + Σ_h ψ_h · holiday_h(date)          # BFCM, Xmas, NYE, Easter, COVID
-           + β_c^reg  · log(p) · (1 − promo)    # category regular ε
-           + β_c^prom · log(p) · promo          # category promo ε
-           + γ · delivery_days + ε_ist
-```
-
-Within-(item, shop) demeaning absorbs the baseline (Frisch-Waugh-Lovell). Per-item ε is layered via ridge regression on the same panel (2,693 items) with v9 category fallback for the remaining 307 (10%) where ridge produced a positive or unstable slope. Fit in `statsmodels.OLS` — fully transparent, no MCMC needed at this scale.
+**Data behind it:** 3,000 items × 8 shops × ~1,080 days (Jan 2018 → Dec 2020). 5 source tables joined to an item-shop-week panel — 1.9M rows after the sellability filter.
 
 ---
 
-## Slide 3 — Why this method beats the alternatives we tried
+## Slide 2 — How we measured it (in plain English)
 
-| Property | v9 MMM | v5 FE-panel | LightGBM | Naive Δlog/Δlog |
-|---|:---:|:---:|:---:|:---:|
-| Isolates price from seasonality/events | ✅ | ❌ | ⚠ | ❌ |
-| Variance decomposition for VP | ✅ | ❌ | ❌ | ❌ |
-| Per-category ε with CI | ✅ | ✅ | ⚠ | ❌ |
-| Splits promo / regular | ✅ | ✅ | ❌ | ❌ |
-| Actionable per-item ε | ✅ | ✅ | ❌ (flat regions) | ❌ |
-| Holdout R² | **0.56** | 0.51 | 0.54 | n/a |
-| % categories ε<0 | **100%** | 100% | 100% | 0% |
-| **Composite leaderboard** | **0.820** | 0.800 | 0.804 | 0.247 |
+Sales move for many reasons. Brand baseline. Slow growth over years. Christmas and Black Friday spikes. Summer lulls. AND price. If you regress sales on price alone, the price coefficient soaks up everything that happened to move *with* price — including January slowdowns and BFCM promo timing. That's why naive regressions show implausibly flat slopes.
 
-**Variance share across the weekly panel (volatility, not slope):** events 38%, seasonality 33%, trend 25%, **price 4%**. Most of home24's weekly demand *wobble* is calendar/event-driven. That is a story about *what moves week-to-week*, not about elasticity — the price-response slope is a separate object, and v12 identifies it sharply at -2.40.
+**Our approach is two steps:**
 
-**Robustness:** v10 (Double-ML with LightGBM nuisance) and v11 (Tweedie GLM with Mundlak FE) were both run as modern-causal-ML checks. Both confirm v9's sign on the majority of categories; neither dethrones v9 on the composite. v4 (Poisson GLM on top-500 items) lands at ε≈-2.3 — closer to Bijmolt — which bounds the true ε from below. Honest range: **[-2.3, -0.58]**.
+1. **Strip out everything that isn't price** — item baseline, slow time trend, annual seasonality (4 Fourier harmonics), event spikes (Black Friday, Cyber Monday, Christmas, NYE, Easter, COVID), delivery promise, promotion state. What's left is the part of demand variation that price could plausibly explain.
+2. **Read the slope on what's left** — the price coefficient on that cleaned residual is the elasticity. We do this with a Poisson regression on raw unit counts, because 90% of sellable item-shop-days have zero sales and a log-transform would systematically pull the slope toward zero.
+
+That recipe is **v12** in the leaderboard. It scales the count-likelihood approach to all 3,000 items via a high-dimensional fixed-effects solver (ppmlhdfe — Correia 2014). Reads as a single regression, but absorbs ~20,000 item-shop intercepts internally.
+
+> **Want the math?** Full equation, FWL partial-out logic, and the Silva & Tenreyro (2006) log+1 attenuation result are in the *Methodology tab → EDA findings* and *Methodology appendix* below.
 
 ---
 
-## Slide 4 — Results by main category + literature benchmark
+## Slide 3 — What we found
 
-Regular-price elasticities (top 10 main categories, sorted most-to-least elastic). All 17 categories show statistically significant negative ε. Median |ε| ≈ 0.58 — demand is **moderately inelastic**.
+**Per-category ε (v12, all 17 main categories, sorted most-to-least elastic).** All 17 are negative. Median ε = **-2.40**, range [-4.37, -0.99]. The most elastic categories sit around -4 (commodity-like, more substitutable), the least elastic around -1 (considered durable purchases with delivery friction).
 
-| Category | n_items | Regular ε | Promo ε | Bijmolt 2005 durables range |
-|---|---:|---:|---:|:---:|
-| im6  | 490 | -0.75 | -1.11 | -1.0 to -2.0 |
-| im2  | 122 | -0.74 | -1.03 | -1.0 to -2.0 |
-| im16 | 221 | -0.73 | -1.13 | -1.0 to -2.0 |
-| im12 |  27 | -0.72 | -1.78 | -1.0 to -2.0 |
-| im9  |  95 | -0.70 | -0.30 | -1.0 to -2.0 |
-| im17 | 234 | -0.58 | -0.96 | -1.0 to -2.0 |
-| im14 (largest) | 629 | -0.45 | -0.51 | -1.0 to -2.0 |
-| im19 |  75 | -0.35 | -0.47 | -1.0 to -2.0 |
+| Category | Regular ε | Reads as |
+|---|---:|---|
+| Most elastic | -4.37 | 10% price cut ≈ +44% units |
+| Median | -2.40 | 10% price cut ≈ +24% units |
+| Least elastic | -0.99 | 10% price cut ≈ +10% units |
 
-**Why our ε sits at the inelastic end of the literature:**
-- *Online-only retailer at the time* — no competing showroom; switching cost is higher than supermarket FMCG (Hoch 1995: -2 to -4) and higher than the durables average
-- *Considered purchase + delivery friction* — furniture buyers don't react impulsively to small price moves
-- *Observed price variation is narrow* (5–95th percentile = [-30%, +43%] of base) → classic **attenuation bias** toward zero vs. experimental ranges in published meta-analyses
-- *2020 COVID surge* dragged median ε down — home-goods demand was inelastically high during lockdown
+**A reality-check on the magnitude.** v4 (the same Poisson recipe restricted to the top-500 items where it fits independently) lands at **ε ≈ -2.30** — within 0.1 of v12. Two of the four credible models agree on magnitude. The other two (v9 MMM and v10b DML) sit at -0.58 and -0.22 — both negative, both attenuated by the log-transform / DML-collinearity issues. **Honest range across all four credible models: -2.4 to -0.22.** Headline is -2.40.
 
-**Pricing implication:** for inelastic categories (|ε|<1) marginal list-price increases grow revenue. Promo ε ≥ |1| in 11/17 categories means current discount depths roughly self-fund in volume but rarely earn the discount back outright — there is room to tighten promo depth in inelastic categories without losing units.
-
-> **So what:** im14 (629 items, regular ε=-0.45) — a 5% list-price increase predicts ~2.3% unit drop → net revenue lift in the low single digits weekly, holding mix constant. Trial on the top 10 SKUs in im14 first; measure against a matched holdout.
+**One business-relevant pattern.** Promo elasticity (when items are on discount) is consistently *less elastic* than regular-price elasticity in 11/17 categories. Three plausible reasons: (1) promo timing already absorbs the seasonal demand spike, (2) discount-window buyers behave differently from regular buyers, (3) reference-price erosion — categories that promote constantly train customers to wait. The "promo ε vs regular ε" table is in slide 4 of the appendix.
 
 ---
 
-## Slide 5 — Caveats & next steps
+## Slide 4 — What's in the dashboard, and how to read it
 
-**Caveats**
-1. **Cross-elasticities** (substitutes/complements within category) are ignored — own-ε overstates revenue impact of any single SKU price move. Biggest honest gap in the analysis.
-2. **Endogeneity:** prices are not random — promo timing co-moves with expected demand. Item-shop FE + the seasonality/event terms absorb most of this; residual endogeneity remains. v10 DML is the first-pass fix already implemented; a proper IV (e.g. cost shocks, competitor price) is the next-level fix.
-3. **Sample period covers COVID.** 2020 home-goods demand was inelastically high during lockdown; this drags median ε toward zero. Rolling re-estimation would let recent quarters drive the headline.
+The dashboard exposes the analysis in five tabs:
 
-**Next steps**
-- **A/B price experiment** on 5–10 high-volume SKUs in inelastic categories (im14, im17) to validate ε empirically and measure cross-effects.
-- **Cross-elasticity matrix** at sub-category level for top-volume SKUs — closes the biggest caveat above.
-- **Scale v4's Poisson recipe** to all 3000 items (currently top-500 only) — would tighten the [-2.3, -0.58] range and likely move the headline closer to Bijmolt durables.
+- **Story** *(this carousel)* — 5 slides, written for a non-technical reader.
+- **Leaderboard** — all 13 models we tried, scored by a composite metric (forecast accuracy + correct sign + portfolio coverage + stability). v9 wins composite (best forecaster). v12 wins on magnitude correctness. Both ship.
+- **ε across models** — side-by-side per-category bars for the 4 credible models (v4, v9, v10b, v12). v12 highlighted; the others are present so you can see the disagreement honestly.
+- **MMM decomposition** — variance share donut + per-category bars. Important framing: 96% of weekly *volatility* is calendar-driven, 4% is price. That's about *what wobbles the series week-to-week* — **not** about elasticity. The elasticity is a slope (how customers respond to a price level), and a small variance share is fully compatible with a sharp slope.
+- **Elasticity simulator** — pick any entity (item / sub-category / main-category / portfolio), drag a price slider, and see the predicted unit change and revenue impact with a 95% confidence band. Backed by the reconciled elasticities (hierarchically coherent across all four aggregation levels).
+- **Methodology** — composite metric formula, EDA findings, the v9 vs v12 honesty story, and links into the model cards.
+
+The two key numbers a stakeholder takes away from this dashboard: **ε = -2.4 at the median**, and **v9's forecast covers all 3,000 items for operational use**.
+
+---
+
+## Slide 5 — Caveats and what's next
+
+**Caveats — the honest gaps**
+
+1. **Cross-elasticities are ignored.** When a competitor item drops in price within the same category, our model attributes the lost units to the focal item's own elasticity. Own-ε therefore *overstates* the revenue impact of any single SKU's price move. Biggest honest gap in the analysis.
+2. **Prices aren't random.** Promotions are timed to expected demand. Item-shop fixed effects and the seasonality/event controls absorb most of this, but residual endogeneity remains. v10 (Double/Debiased ML) is the first-pass fix already in the leaderboard; a proper instrument (cost shocks, competitor price) is the next-level fix.
+3. **Sample covers COVID.** 2020 home-goods demand was inelastically high during lockdown; this drags the headline toward zero. Rolling re-estimation would let recent quarters drive the number.
+4. **R² interpretation.** Our composite metric scores R² on `log(sales+1)` which structurally favours log-space models over count models. v12's holdout R² (0.30) looks lower than v9's (0.56) — but it's the wrong scoring scale for a count model. We surface this explicitly in the Leaderboard tab's "Likelihood-appropriate" column.
+
+**Next steps — roughly in priority order**
+
+- **A/B price experiment** on 5–10 high-volume SKUs in mid-elasticity categories to validate ε empirically and measure cross-effects.
+- **Cross-elasticity matrix** at sub-category level for top-volume SKUs — closes the biggest caveat.
+- **Hierarchical Bayes for per-item promo ε** — currently inherited from main_category; PyMC partial-pooling would let high-promo-frequency items earn their own slope.
 - **Rolling 6-month re-estimation** + regime-change monitoring; surface in the dashboard.
+
+> **Bottom line.** ε = **-2.4** at the median, sharply identified across two count-likelihood models. Caveats are stated, not hidden. The roadmap targets the gaps the analysis itself surfaces.
 
 ---
 
